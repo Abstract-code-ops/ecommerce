@@ -43,6 +43,6 @@ export default async function ProductDetails(props:{
 
     // 2. Render the Client Component and pass data as props
     return (
-        <ProductClientPage product={product} />
+        <ProductClientPage product={product} relatedProducts={relatedProducts.data}/>
     );
 }

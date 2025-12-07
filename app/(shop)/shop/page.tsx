@@ -1,6 +1,7 @@
 import ProductSlider from "@/components/layout/shop/product-slider"
 import { ProductCard } from "@/components/layout/shop/shop-card"
 import { ShopCarousel } from "@/components/layout/shop/shop-carousel"
+import BrowsingHistoryList from "@/components/shared/browsing-history-list"
 import { Card, CardContent } from "@/components/ui/card"
 import { getProductByTag } from "@/lib/actions/product.actions"
 import data from "@/lib/data"
@@ -19,6 +20,7 @@ export default async function Page() {
                                 title="Latest Products" 
                                 subTitle="See what's new in our collection and browse the latest styles and designs." 
                                 products={todayDeals} 
+                                showBottom
                                 />
                         </CardContent>
                     </Card>
@@ -29,9 +31,13 @@ export default async function Page() {
                                 title="Best Sellers" 
                                 subTitle="Shop our best selling products and find the perfect fit for your style." 
                                 products={bestSelling} 
+                                showBottom
                                 />
                         </CardContent>
                     </Card>
+                </div>
+                <div className="p-4">
+                    <BrowsingHistoryList />
                 </div>
             </div>
     )

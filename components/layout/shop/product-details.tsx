@@ -44,8 +44,8 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
             {formatCurrency(product.price)}
           </span>
           
-          <div className="flex items-center gap-1 text-sm border-l border-gray-300 pl-4">
-            <div className="flex text-secondary">
+          <div className="flex items-center gap-1 text-md border-l border-gray-300 pl-4">
+            <div className="flex text-[#FFC67D]">
                {[...Array(5)].map((_, i) => (
                  <Star key={i} size={14} fill={i < Math.floor(product.avgRating || 0) ? "currentColor" : "none"} />
                ))}

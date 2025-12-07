@@ -5,13 +5,16 @@ import Lenis from "@studio-freight/lenis"; // Note: removed /types to import the
 import ProductGallery from "@/components/layout/shop/product-gallery";
 import ProductDetailsInfo from "@/components/layout/shop/product-details";
 import { IProduct } from "@/lib/db/models/product.model"; // Ensure you have this type imported
+import ProductSlider from "./product-slider";
+import BrowsingHistoryList from "@/components/shared/browsing-history-list";
+import AddToBrowsingHistory from "@/components/shared/add-to-browsing-history";
 
 interface ProductClientPageProps {
     product: IProduct;
-    // Add relatedProducts here if you plan to use them in the UI later
+    relatedProducts: IProduct[];
 }
 
-export default function ProductClientPage({ product }: ProductClientPageProps) {
+export default function ProductClientPage({ product, relatedProducts }: ProductClientPageProps) {
     const [lenis, setLenis] = useState<Lenis | null>(null);
 
     useEffect(() => {
@@ -40,6 +43,7 @@ export default function ProductClientPage({ product }: ProductClientPageProps) {
 
     return (
         <div className="">
+            <AddToBrowsingHistory id={product._id.toString()} category={product.category} />
             <section className="grid grid-cols-1 lg:grid-cols-12 min-h-screen">
                 {/* LEFT: Gallery */}
                 <div className="lg:col-span-7 xl:col-span-8 relative">
@@ -53,6 +57,16 @@ export default function ProductClientPage({ product }: ProductClientPageProps) {
                     </div>
                 </div>
             </section>
+            <section className="mt-20">
+                <ProductSlider
+                    title="Related Products"
+                    products={relatedProducts}
+                    showBottom={true}
+                />
+            </section>
+            <div className="">
+                <BrowsingHistoryList className="mt-10" />
+            </div>
         </div>
     );
 }

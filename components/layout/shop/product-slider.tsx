@@ -13,9 +13,10 @@ interface ProductSliderProps {
     title: string;
     subTitle?: string
     products: IProduct[];
+    showBottom: boolean
 }
 
-export default function ProductSlider({ title, subTitle, products }: ProductSliderProps) {
+export default function ProductSlider({ title, subTitle, products, showBottom }: ProductSliderProps) {
     return (
         <div className=" w-full mb-8">
             <div className="flex flex-col w-full pl-8 mb-2">
@@ -33,9 +34,9 @@ export default function ProductSlider({ title, subTitle, products }: ProductSlid
                     {products.map((product) => (
                         <CarouselItem
                           key={product.slug}
-                          className="sm:basis-1/2 lg:basis-1/4 mb-3"
+                          className="sm:basis-1/2 md:basis-1/3 lg:basis-1/4 mb-3"
                         >
-                            <ProductCard product={product} isDeal={true} />
+                            <ProductCard product={product} isDeal={product.tags.includes('today-deal')} showBottom={showBottom} />
                         </CarouselItem>
                     ))
                 }</CarouselContent>

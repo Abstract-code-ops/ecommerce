@@ -26,6 +26,7 @@ export interface ProductCardProps {
     product: IProduct
     className?: string
     isDeal?: boolean
+    showBottom?: boolean
 }
 
 
@@ -47,6 +48,7 @@ export function ProductCard({
     product,
     className,
     isDeal = false,
+    showBottom = true
 }: ProductCardProps) {
 
     /**
@@ -195,16 +197,16 @@ export function ProductCard({
                 <div className="flex gap-2 items-center justify-between mt-2 pr-2">
 
                 {/* Dimensions */}
-                    {product.dimensions && 
+                    {product.dimensions && showBottom && 
                         <p className="text-sm text-muted-foreground/80 items-center">
                             {product.dimensions.width}cm X {product.dimensions.height}cm X {product.dimensions.depth}cm
                         </p>
                     }
                     {/* 3. Rating */}
-                    <div className="flex gap-1 items-center">
+                    {showBottom && <div className="flex gap-1 items-center">
                         <Rating rating={product.avgRating || 0} size={2} />
                         <h3 className="text-sm">{`(${product.numReviews})`}</h3>
-                    </div>
+                    </div>}
                 </div>
 
                 {/* 4. Bottom Section */}
