@@ -14,7 +14,7 @@ export default function Header() {
                 <div className="flex items-center justify-between py-3 px-5">
                     <div className="flex items-center">
                         <Link 
-                            href="/"
+                            href="/shop"
                             className="flex items-center header-button font-extrabold text-2xl m-1"
                             >
                                 {App_NAME}

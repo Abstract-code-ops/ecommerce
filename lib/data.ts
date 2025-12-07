@@ -526,7 +526,7 @@ const products: IproductInput[] = [
 
 const data: Data = {
     headerMenus: [
-        { name: "Home", href: '/' },
+        { name: "Home", href: '/shop' },
         { name: "Shop", href: '/shop' },
         { name: "Featured Products", href: '/search?tag=featured-products' },
         { name: "Best Sellers", href: '/search?tag=best-sellers' },
