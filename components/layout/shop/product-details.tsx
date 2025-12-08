@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react';
-import { Star, Minus, Plus, CreditCard } from 'lucide-react';
+import { Star, Minus, Plus, CreditCard, Banknote } from 'lucide-react';
 import { p } from 'framer-motion/client';
 import { IProduct } from '@/lib/db/models/product.model';
 import { formatCurrency } from '@/lib/utils';
@@ -139,7 +139,7 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
         
         {/* Payment Methods */}
         <div className="flex items-center gap-3 text-xs text-gray-500 mt-2">
-           <span className="flex items-center gap-1 border px-2 py-1 rounded">
+           {/* <span className="flex items-center gap-1 border px-2 py-1 rounded">
              <CreditCard size={12}/> Visa
            </span>
            <span className="flex items-center gap-1 border px-2 py-1 rounded">
@@ -147,9 +147,9 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
            </span>
            <span className="flex items-center gap-1 border px-2 py-1 rounded">
              Tabby
-           </span>
-           <span className="flex items-center gap-1 border px-2 py-1 rounded">
-             COD
+           </span> */}
+           <span className="flex items-center gap-1 border px-2 py-1 rounded hover:border-secondary hover:scale-105 hover:text-secondary transition-all cursor-pointer">
+             <Banknote size={12}/> COD
            </span>
         </div>
       </div>
