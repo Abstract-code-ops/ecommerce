@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { size, z } from "zod";
 import { formatNumberWithDecimal } from "./utils";
 
 const Price = (field: string) =>
@@ -44,3 +44,41 @@ export const ProductInputSchema = z.object({
     reviews: z.array(z.string()).default([]),
     numSales: z.coerce.number().int().nonnegative("Number of Sales cannot be negative").optional(),
 })
+
+export const OrderItemSchema = z.object({
+    clientId: z.string().min(1, "Client ID is required"),
+    productIds: z.array(z.string()).min(1, "At least one product ID is required"),
+    name: z.string().min(1, "Name is required"),
+    slug: z.string().min(1, "Slug is required"),
+    category: z.string().min(1, "Category is required"),
+    quantity: z.number().int().nonnegative("Quantity cannot be negative"),
+    countInStock: z.number().int().nonnegative("Count in Stock cannot be negative"),
+    image: z.string().min(1, "Image URL is required"),
+    price: Price("Price").min(0, "Price must be at least 0"),
+    totalPrice: Price("Total Price").min(0, "Total Price must be at least 0"),
+    size: z.string().optional(),
+    color: z.string().optional(),
+});
+
+export const CartSchema = z.object({
+    clientId: z.string().min(1, "Client ID is required"),
+    items: z.array(OrderItemSchema).default([]),
+    totalItems: z.coerce.number().int().nonnegative("Total Items cannot be negative").default(0),
+    totalPrice: Price("Total Price").min(0, "Total Price must be at least 0").default(0),
+    taxPrice: Price("Tax Price").min(0, "Tax Price must be at least 0").default(0),
+    shippingPrice: Price("Shipping Price").min(0, "Shipping Price must be at least 0").default(0),
+    grandTotalPrice: Price("Grand Total Price").min(0, "Grand Total Price must be at least 0").default(0),
+    paymentMethod: z.enum(['paypal', 'stripe', 'cod']).optional(),
+    deliveryDateIndex: z.coerce.number().int().nonnegative("Delivery Date Index cannot be negative").optional(),
+    expectedDeliveryDate: z.coerce.date().optional(),
+});
+
+export const ShippingAddressSchema = z.object({
+    fullName: z.string().min(1, "Full name is required"),
+    street: z.string().min(1, "Street address is required"),
+    city: z.string().min(1, "City is required"),
+    emirate: z.string().min(1, "Emirate is required"),
+    country: z.string().min(1, "Country is required"),
+    lat: z.number().optional(),
+    lng: z.number().optional(),
+});

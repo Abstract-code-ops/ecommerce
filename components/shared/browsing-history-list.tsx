@@ -14,7 +14,6 @@ export default function BrowsingHistoryList(
     }
 ) {
     const { products } = useBrowsingHistory()
-    console.log('products', products)
 
     return (
         products.length > 0 && <div className="">
@@ -35,7 +34,6 @@ export default function BrowsingHistoryList(
 
 function ProductList({ title, hideDetails, type }: { title: string, hideDetails?: boolean, type: 'related' | 'history' }) {
     const { products } = useBrowsingHistory()
-    console.log('product-2', products)
     const [data, setData] = useState<IProduct[]>([])
 
     useEffect(() => {

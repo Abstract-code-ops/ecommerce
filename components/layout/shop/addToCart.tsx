@@ -3,7 +3,10 @@ import React, { useState } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { ShoppingCart, Check, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, generateId } from '@/lib/utils';
+import { toast } from 'react-toastify';
+import useCartStore from '@/lib/hooks/useCartStore';
+import { OrderItem } from '@/types';
 
 const AddToCartButton = ({
   className,
@@ -17,6 +20,10 @@ const AddToCartButton = ({
   textColor = "text-white",
   ItemIcon: ItemIcon = Package,
   onClick,
+  product,
+  size,
+  color,
+  showPrice = true, // <-- new prop, default true
 }: {
   className?: string;
   price?: number;
@@ -29,13 +36,52 @@ const AddToCartButton = ({
   textColor?: string;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   ItemIcon?: React.ElementType;
+  product?: {
+    _id: string;
+    name: string;
+    slug: string;
+    category: string;
+    images: string[];
+    price: number;
+    countInStock: number;
+  };
+  size?: string;
+  color?: string;
+  showPrice?: boolean; // <-- type added
 }) => {
   const [status, setStatus] = useState('idle'); // 'idle', 'animating', 'success'
   const controls = useAnimation();
+  const { addItem } = useCartStore();
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (onClick) onClick(e);
     if (status !== 'idle') return;
+
+    // Add to cart if product is provided
+    if (product) {
+      try {
+        const orderItem: OrderItem = {
+          clientId: generateId(),
+          productIds: [product._id],
+          name: product.name,
+          slug: product.slug,
+          category: product.category,
+          quantity: quantity,
+          countInStock: product.countInStock,
+          image: product.images[0],
+          price: product.price,
+          totalPrice: product.price * quantity,
+          size,
+          color,
+        };
+        
+        await addItem(orderItem, quantity);
+        toast.success(`${product.name} added to cart!`);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to add item to cart');
+        return;
+      }
+    }
 
     setStatus('animating');
 
@@ -67,9 +113,12 @@ const AddToCartButton = ({
       >
         <ShoppingCart className="mr-2 h-4 w-4" />
         {text}
-        {price && <span className="hidden sm:inline text-xs opacity-70 ml-2">
+        {/* Only render total price when showPrice is true */}
+        {showPrice && price && (
+          <span className="hidden sm:inline text-xs opacity-70 ml-2">
             — {formatCurrency(price * quantity)}
-        </span>}
+          </span>
+        )}
       </span>
 
       {/* 2. Success Text (Fades in at the end) */}

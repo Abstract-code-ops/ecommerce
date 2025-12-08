@@ -31,7 +31,10 @@ export default function ProductSlider({ title, subTitle, products, showBottom }:
             >
                 <CarouselContent
                 >
-                    {products.map((product) => (
+                    {products
+                      // filter out out-of-stock products
+                      .filter((p) => (p.countInStock ?? 0) > 0)
+                      .map((product) => (
                         <CarouselItem
                           key={product.slug}
                           className="sm:basis-1/2 md:basis-1/3 lg:basis-1/4 mb-3"

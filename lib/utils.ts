@@ -30,3 +30,10 @@ const NUMBER_FORMATTER = new Intl.NumberFormat('en-US')
 export function formatNumber(num: number) {
   return NUMBER_FORMATTER.format(num)
 }
+
+export const round2Decimals = (num: number): number => {
+  return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
+export const generateId = (): string => 
+  Array.from({ length: 24 }, () => Math.floor(Math.random() * 10).toString(10)).join('');

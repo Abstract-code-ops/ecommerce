@@ -5,14 +5,15 @@ import { connectToDB } from "@/lib/db";
 
 export const GET = async (req: NextRequest) => {
     
-    const listType = req.nextUrl.searchParams.get('listType') || 'history';
+    const typeParam = req.nextUrl.searchParams.get("type") ?? req.nextUrl.searchParams.get("listType");
+    const listType = typeParam || "history";
     const productIdsParams = req.nextUrl.searchParams.get('ids');
     const categoriesParams = req.nextUrl.searchParams.get('categories');
 
-    if (!productIdsParams || !categoriesParams) return NextResponse.error();
+    if (!productIdsParams || !categoriesParams) return NextResponse.json({ error: "Missing `ids` or `categories` query parameters" }, { status: 400 });
 
-    const productIds = productIdsParams.split(',');
-    const categories = categoriesParams.split(',');
+    const productIds = productIdsParams.split(',').filter(Boolean);
+    const categories = categoriesParams.split(',').filter(Boolean);
 
     const filter = 
     listType === 'history' ?

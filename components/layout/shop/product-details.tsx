@@ -20,6 +20,10 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
   const [quantity, setQuantity] = useState(1);
   const { product } = props
 
+  const count = product.countInStock ?? 0;
+  const isOutOfStock = count <= 0;
+  const isLowStock = count > 0 && count < 3;
+
   const handleDecrement = () => {
     if (quantity > 1) setQuantity(q => q - 1);
   };
@@ -53,6 +57,18 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
             <span className="opacity-70">({product.numReviews})</span>
           </div>
         </div>
+
+        {/* Low stock / Out of stock alerts */}
+        {isLowStock && (
+          <div className="text-sm text-red-600 font-medium mb-2">
+            Only {count} left in stock — order soon.
+          </div>
+        )}
+        {isOutOfStock && (
+          <div className="text-sm text-red-700 font-semibold mb-2">
+            Out of stock
+          </div>
+        )}
       </div>
 
       <hr className="border-black opacity-50" />
@@ -66,7 +82,8 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
             <button 
               onClick={handleDecrement}
               aria-label="Decrease quantity"
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              disabled={isOutOfStock}
+              className={`p-2 hover:bg-gray-100 rounded-full transition-colors ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Minus size={16} />
             </button>
@@ -75,37 +92,49 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
               min="1" 
               value={quantity}
               onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+              disabled={isOutOfStock}
               className="w-8 text-center bg-transparent font-medium focus:outline-none appearance-none m-0"
             />
             <button 
               onClick={handleIncrement}
               aria-label="Increase quantity"
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              disabled={isOutOfStock}
+              className={`p-2 hover:bg-gray-100 rounded-full transition-colors ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Plus size={16} />
             </button>
           </div>
 
-          {/* Add to Cart Button */}
-          {/* <button 
-            className="flex-1 bg-primary text-white font-medium py-3 px-6 rounded-md hover:bg-gray-800 transition-colors flex justify-center items-center gap-2"
-          >
-            Add to Cart
-            <span className="hidden sm:inline text-xs opacity-70 ml-1">
-              — {formatCurrency(product.price * quantity)}
-            </span>
-          </button> */}
-          <AddToCartButton
-            className='hidden min-[375]:block flex-1 text-sm py-3 px-6 rounded-md transition-all '
-            price={product.price}
-            quantity={quantity}
-            text="Add to Cart"
-            successText="Added!"
-            cartColor="text-white"
-            itemColor="bg-brown-400"
-            buttonColor="bg-primary hover:bg-gray-800"
-            textColor="text-white"
-          />
+          {/* Add to Cart Button or Disabled Out of Stock Button */}
+          {isOutOfStock ? (
+            <button 
+              className="flex-1 bg-gray-300 text-gray-700 font-medium py-3 px-6 rounded-md flex justify-center items-center gap-2 opacity-75 cursor-not-allowed"
+              disabled
+            >
+              Out of stock
+            </button>
+          ) : (
+            <AddToCartButton
+              className='hidden min-[375]:block flex-1 text-sm py-3 px-6 rounded-md transition-all '
+              price={product.price}
+              quantity={quantity}
+              text="Add to Cart"
+              successText="Added!"
+              cartColor="text-white"
+              itemColor="bg-brown-400"
+              buttonColor="bg-primary hover:bg-gray-800"
+              textColor="text-white"
+              product={{
+                _id: product._id.toString(),
+                name: product.name,
+                slug: product.slug,
+                category: product.category,
+                images: product.images,
+                price: product.price,
+                countInStock: product.countInStock || 0
+              }}
+            />
+          )}
         </div>
         
         {/* Payment Methods */}
@@ -178,11 +207,20 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
               <span className="text-xs text-gray-500">Total</span>
               <span className="font-bold">{formatCurrency(product.price * quantity)}</span>
             </div>
-            <button 
-              className="flex-1 bg-primary text-white font-medium py-3 rounded-md"
-            >
-              Add to Cart
-            </button>
+            {isOutOfStock ? (
+              <button 
+                className="flex-1 bg-gray-300 text-gray-700 font-medium py-3 rounded-md opacity-75 cursor-not-allowed"
+                disabled
+              >
+                Out of stock
+              </button>
+            ) : (
+              <button 
+                className="flex-1 bg-primary text-white font-medium py-3 rounded-md"
+              >
+                Add to Cart
+              </button>
+            )}
           </div>
         </div>
 

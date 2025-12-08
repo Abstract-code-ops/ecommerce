@@ -37,6 +37,7 @@ interface CardBottomProps {
     className?: string;
     forListing?: boolean;
     plain?: boolean;
+    product?: IProduct;
 }
 
 /**
@@ -116,9 +117,8 @@ export function ProductCard({
      * 3. CardBottom
      * Handles pricing, deal logic, and add-to-cart action.
      */
-    const CardBottom = ({ price, listPrice, isDeal, className, forListing, plain }: CardBottomProps) => {
+    const CardBottom = ({ price, listPrice, isDeal, className, forListing, plain, product: cardProduct }: CardBottomProps) => {
         // Calculate discount percentage if it's a deal and listPrice exists
-        console.log(price, listPrice, isDeal)
         const discountPercent =
             isDeal && listPrice && listPrice > price
                 ? Math.round(100 - (price / listPrice) * 100)
@@ -127,7 +127,7 @@ export function ProductCard({
         const [intValue, decimalValue] = stringValue.includes('.') ? stringValue.split('.') : [stringValue, '']
 
         return (
-            <div className="mt-2 flex items-center justify-between pt-3 px-1 gap-1">
+            <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between pt-3 px-1 gap-2 sm:gap-1">
                 {/* Left: Price & Deal Info */}
                 {plain ? formatCurrency(price):
                 (<div className="flex flex-col gap-1">
@@ -160,16 +160,27 @@ export function ProductCard({
                 </div>)}
 
                 {/* Right: Add to Cart Button */}
-                {/* <button
-                    className="group flex items-center justify-center gap-2 rounded-sm bg-stone-800 p-2 text-stone-50 cursor-pointer transition-colors duration-300 hover:bg-[#31a97b] focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-1"
-                    aria-label="Add to cart"
-                >
-                    Add to cart <ShoppingCart size={14} strokeWidth={2} />
-                </button> */}
-                <Button className="active:scale-95 text-xs font-inter cursor-pointer rounded-2xl">
-                    <ShoppingCart size={14} strokeWidth={2} />
-                    Add to cart
-                </Button>
+                <AddToCartButton
+                    className="text-xs sm:text-[10px] md:text-xs font-inter rounded-2xl py-1.5 px-3 sm:py-1 sm:px-2 md:py-2 md:px-3 whitespace-nowrap min-w-fit"
+                    price={price}
+                    quantity={1}
+                    text="Add to cart"
+                    successText="Added!"
+                    cartColor="text-white"
+                    itemColor="bg-yellow-400"
+                    buttonColor="bg-primary hover:bg-gray-800"
+                    textColor="text-white"
+                    showPrice={false} // <-- hide total price to avoid cut-off in carousels/listings
+                    product={cardProduct ? {
+                        _id: cardProduct._id.toString(),
+                        name: cardProduct.name,
+                        slug: cardProduct.slug,
+                        category: cardProduct.category,
+                        images: cardProduct.images,
+                        price: cardProduct.price,
+                        countInStock: cardProduct.countInStock || 0
+                    } : undefined}
+                />
             </div>
         );
     };
@@ -214,6 +225,7 @@ export function ProductCard({
                     price={product.price}
                     listPrice={product.listPrice}
                     isDeal={isDeal}
+                    product={product}
                 />
             </div>
         </div>
