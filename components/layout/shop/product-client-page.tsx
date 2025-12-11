@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Lenis from "@studio-freight/lenis"; // Note: removed /types to import the actual class
 import ProductGallery from "@/components/layout/shop/product-gallery";
 import ProductDetailsInfo from "@/components/layout/shop/product-details";
@@ -16,6 +16,7 @@ interface ProductClientPageProps {
 
 export default function ProductClientPage({ product, relatedProducts }: ProductClientPageProps) {
     const [lenis, setLenis] = useState<Lenis | null>(null);
+    const rafRef = useRef<number | null>(null); // <-- track RAF id
 
     useEffect(() => {
         const lenisInstance = new Lenis({
@@ -30,14 +31,36 @@ export default function ProductClientPage({ product, relatedProducts }: ProductC
 
         setLenis(lenisInstance);
 
-        function raf(time: number) {
-            lenisInstance.raf(time);
-            requestAnimationFrame(raf);
+        // use a named function for RAF so we can cancel it reliably
+        function loop(time: number) {
+            try {
+                // only call raf if lenisInstance still exists
+                if (lenisInstance && typeof (lenisInstance as any).raf === 'function') {
+                    lenisInstance.raf(time);
+                }
+            } catch (err) {
+                // swallow errors to avoid propagation to extensions/devtools
+                // (keeps runtime stable if lenisInstance was destroyed)
+                // console.debug('lenis raf error', err);
+            }
+            rafRef.current = requestAnimationFrame(loop);
         }
-        requestAnimationFrame(raf);
+
+        // start RAF loop and keep id in ref
+        rafRef.current = requestAnimationFrame(loop);
 
         return () => {
-            lenisInstance.destroy();
+            // cancel RAF loop on unmount
+            if (rafRef.current !== null) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+            // destroy Lenis instance
+            try {
+                lenisInstance.destroy();
+            } catch (e) {
+                // ignore destroy errors
+            }
         }
     }, []);
 

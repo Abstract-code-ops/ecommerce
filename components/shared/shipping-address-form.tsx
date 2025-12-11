@@ -88,20 +88,21 @@ export default function ShippingAddressForm({
   };
 
   return (
-    <div className="space-y-6 p-6 bg-card rounded-lg border shadow-sm">
-      <h2 className="text-2xl font-bold">Shipping Address</h2>
+    <div className="space-y-6 p-6">
+      <h2 className="text-xl font-semibold">Shipping Address</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Full Name</label>
+          <div className="space-y-3 col-span-2">
+            <label className="text-sm font-medium text-center">Full Name</label>
             <Input
               value={address.fullName}
               onChange={(e) => handleChange("fullName", e.target.value)}
               placeholder="John Doe"
+              className=""
             />
             {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName}</p>}
           </div>
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <label className="text-sm font-medium">Country</label>
             <Select
               value={address.country}
@@ -119,7 +120,7 @@ export default function ShippingAddressForm({
               </SelectContent>
             </Select>
             {errors.country && <p className="text-red-500 text-xs">{errors.country}</p>}
-          </div>
+          </div> */}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -178,7 +179,7 @@ export default function ShippingAddressForm({
             </div>
         </div> */}
 
-        <Button type="submit" className="w-full cursor-pointer">Save Address</Button>
+        <Button type="submit" className="w-full cursor-pointer hover:bg-gray-800 active:scale-95">Save Address</Button>
       </form>
 
       <Modal

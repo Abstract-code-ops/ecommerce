@@ -215,11 +215,27 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
                 Out of stock
               </button>
             ) : (
-              <button 
-                className="flex-1 bg-primary text-white font-medium py-3 rounded-md"
-              >
-                Add to Cart
-              </button>
+              <AddToCartButton
+                className="flex-1 text-sm py-3 rounded-md"
+                price={product.price}
+                quantity={quantity}
+                text="Add to Cart"
+                successText="Added!"
+                cartColor="text-white"
+                itemColor="bg-brown-400"
+                buttonColor="bg-primary hover:bg-gray-800"
+                textColor="text-white"
+                showPrice={false}
+                product={{
+                  _id: product._id.toString(),
+                  name: product.name,
+                  slug: product.slug,
+                  category: product.category,
+                  images: product.images,
+                  price: product.price,
+                  countInStock: product.countInStock || 0
+                }}
+              />
             )}
           </div>
         </div>

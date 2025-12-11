@@ -27,16 +27,12 @@ export default function useBrowsingHistory() {
         products,
         addItem: ( product: { id: string; category: string }) => {
             const index = products.findIndex((p) => p.id === product.id)
-            console.log(index, " passed to history")
             if (index !== -1) {
-                console.log("duplicate found")
                 products.splice(index, 1)
             }
-            console.log("adding to history")
             products.unshift(product)
 
             if (products.length > 10) {
-                console.log("truncating history")
                 products.pop()
             }
 

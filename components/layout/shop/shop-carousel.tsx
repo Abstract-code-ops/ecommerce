@@ -122,14 +122,14 @@ export function ShopCarousel({
                 .swiper-pagination-bullet {
                     background-color: white;
                     opacity: 0.5;
-                    width: 10px;
-                    height: 10px;
+                    width: 16px;
+                    height: 16px;
                 }
                 .swiper-pagination-bullet-active {
                     background-color: var(--primary) !important; /* Uses Tailwind primary color */
                     opacity: 1;
-                    width: 12px;
-                    height: 12px;
+                    width: 18px;
+                    height: 18px;
                 }
             `}</style>
         </div>

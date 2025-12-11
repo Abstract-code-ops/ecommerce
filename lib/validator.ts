@@ -68,7 +68,7 @@ export const CartSchema = z.object({
     taxPrice: Price("Tax Price").min(0, "Tax Price must be at least 0").default(0),
     shippingPrice: Price("Shipping Price").min(0, "Shipping Price must be at least 0").default(0),
     grandTotalPrice: Price("Grand Total Price").min(0, "Grand Total Price must be at least 0").default(0),
-    paymentMethod: z.enum(['paypal', 'stripe', 'cod']).optional(),
+    paymentMethod: z.string().optional(),
     deliveryDateIndex: z.coerce.number().int().nonnegative("Delivery Date Index cannot be negative").optional(),
     expectedDeliveryDate: z.coerce.date().optional(),
 });

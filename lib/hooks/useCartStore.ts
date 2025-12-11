@@ -55,7 +55,7 @@ interface CartState {
      * Remove item from cart by clientId
      * @param clientId - Unique identifier of the cart item
      */
-    removeItem: (clientId: string) => void
+    removeItem: (clientId: string) => Promise<void>
     
     /**
      * Update quantity of existing cart item
@@ -64,6 +64,12 @@ interface CartState {
      * @throws Error if quantity invalid or stock insufficient
      */
     updateQuantity: (clientId: string, quantity: number) => Promise<void>
+
+    /**
+     * Set the payment method for the order
+     * @param paymentMethod - 'Card' | 'CashOnDelivery'
+     */
+    setPaymentMethod: (paymentMethod: string) => void
     
     /**
      * Clear all items from cart
@@ -131,7 +137,7 @@ const useCartStore = create(
              * Remove Item from Cart
              * Filters out item by clientId
              */
-            removeItem: (clientId: string) => {
+            removeItem: async (clientId: string) => {
                 const { items } = get().cart;
                 const updatedCartItems = items.filter((item) => item.clientId !== clientId);
                 
@@ -139,6 +145,9 @@ const useCartStore = create(
                     cart: {
                         ...get().cart,
                         items: updatedCartItems,
+                        ...(await calculateDateAndPrice(
+                            {items: updatedCartItems,}
+                        )),
                     },
                 });
             },
@@ -179,6 +188,15 @@ const useCartStore = create(
                             {items: updatedCartItems,}
                         )),
                     },
+                });
+            },
+            
+            /**
+             * Set Payment Method
+             */
+            setPaymentMethod: (paymentMethod: string) => {
+                set({
+                    cart: { ...get().cart, paymentMethod },
                 });
             },
             

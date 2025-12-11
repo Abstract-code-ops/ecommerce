@@ -526,12 +526,12 @@ const products: IproductInput[] = [
 
 const data: Data = {
     headerMenus: [
-        { name: "Home", href: '/shop' },
+        { name: "Home", href: '/' },
         { name: "Shop", href: '/shop' },
-        { name: "Featured Products", href: '/search?tag=featured-products' },
-        { name: "Best Sellers", href: '/search?tag=best-sellers' },
+        { name: "Categories", href: '/shop/products' },
+        { name: "Deals & Offers", href: '/shop/products?deals=true' },
         { name: "Browsing History", href: '/history' },
-        { name: "Customer Service", href: '/page/customer-service' },
+        // { name: "Customer Service", href: '/page/customer-service' },
         { name: "About Us", href: '/page/about-us' },
         { name: "Contact Us", href: '/page/contact-us' },
     ],

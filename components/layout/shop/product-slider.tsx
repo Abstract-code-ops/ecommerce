@@ -20,7 +20,7 @@ export default function ProductSlider({ title, subTitle, products, showBottom }:
     return (
         <div className=" w-full mb-8">
             <div className="flex flex-col w-full pl-8 mb-2">
-                <h2 className="font-medium text-2xl md:text-4xl font-karla-bold mb-3">{title}</h2>
+                <h2 className="font-medium text-2xl md:text-3xl font-karla-bold mb-4">{title}</h2>
                 {subTitle && <h3 className="font-medium text-black/60 text-md md:text-md font-spectral mb-6 max-w-md">{subTitle}</h3>}
             </div>
             <Carousel

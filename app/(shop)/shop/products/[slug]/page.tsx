@@ -29,7 +29,6 @@ export default async function ProductDetails(props:{
 
     // 1. Fetch Data on Server
     const product = await getProductBySlug(params.slug);
-    console.log(product)
 
     if (!product) return <div>Product not found</div>;
 
