@@ -15,7 +15,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { Cart, OrderItem } from "@/types";
-import { calculateDateAndPrice } from "../actions/order.action";
+import { calculateDateAndPrice } from "../actions/order.actions";
 import { generateId } from "../utils";
 
 /**
@@ -46,16 +46,16 @@ interface CartState {
      * Add item to cart or update quantity if exists
      * @param item - The order item to add
      * @param quantity - Quantity to add
-     * @returns Promise<string> - The clientId of the added/updated item
+     * @returns string - The clientId of the added/updated item
      * @throws Error if stock is insufficient
      */
-    addItem: (item: OrderItem, quantity: number) => Promise<string>
+    addItem: (item: OrderItem, quantity: number) => string
     
     /**
      * Remove item from cart by clientId
      * @param clientId - Unique identifier of the cart item
      */
-    removeItem: (clientId: string) => Promise<void>
+    removeItem: (clientId: string) => void
     
     /**
      * Update quantity of existing cart item
@@ -63,7 +63,7 @@ interface CartState {
      * @param quantity - New quantity (must be > 0 and <= countInStock)
      * @throws Error if quantity invalid or stock insufficient
      */
-    updateQuantity: (clientId: string, quantity: number) => Promise<void>
+    updateQuantity: (clientId: string, quantity: number) => void
 
     /**
      * Set the payment method for the order
@@ -92,52 +92,56 @@ const useCartStore = create(
              * - Checks if item exists (by productId, size, color)
              * - Updates quantity if exists, adds new if not
              * - Validates stock availability
-             * - Recalculates totalPrice dynamically
+             * - Recalculates totalPrice dynamically (sync)
              */
-            addItem: async (item: OrderItem, quantity: number) => {
+            addItem: (item: OrderItem, quantity: number) => {
                 const { items } = get().cart;
+                
+                // Block if item is out of stock
+                if (item.countInStock <= 0) {
+                    throw new Error('This item is out of stock');
+                }
+                
                 const existingItem = items.find((i) => i.productIds[0] === item.productIds[0] && i.size === item.size && i.color === item.color);
 
                 if (existingItem) {
                     if (existingItem.quantity + quantity > item.countInStock) {
-                        throw new Error('Not enough stock available');
+                        throw new Error(`Only ${item.countInStock - existingItem.quantity} more available`);
                     }
                 }
                 else {
                     if (quantity > item.countInStock) {
-                        throw new Error('Not enough stock available');
+                        throw new Error(`Only ${item.countInStock} available in stock`);
+                    }
                 }
-            }
 
-            const updatedCartItems = existingItem
-            ? items.map((x) => 
-                x.productIds[0] === item.productIds[0] && x.size === item.size && x.color === item.color
-                ? { ...existingItem, quantity: existingItem.quantity + quantity, totalPrice: item.price * (existingItem.quantity + quantity) }
-                : x
-            ) : [...items, { ...item, quantity, totalPrice: item.price * quantity }];
+                const updatedCartItems = existingItem
+                ? items.map((x) => 
+                    x.productIds[0] === item.productIds[0] && x.size === item.size && x.color === item.color
+                    ? { ...existingItem, quantity: existingItem.quantity + quantity, totalPrice: item.price * (existingItem.quantity + quantity) }
+                    : x
+                ) : [...items, { ...item, quantity, totalPrice: item.price * quantity }];
 
-            set({
-                cart: {
-                    ...get().cart,
-                    items: updatedCartItems,
-                    ...(await calculateDateAndPrice(
-                        {items: updatedCartItems,}
-                    )),
-                },
-            })
+                set({
+                    cart: {
+                        ...get().cart,
+                        items: updatedCartItems,
+                        ...calculateDateAndPrice({ items: updatedCartItems }),
+                    },
+                });
 
-            return updatedCartItems.find(
-                (i) =>
-                    i.productIds[0] === item.productIds[0] &&
-                    i.size === item.size &&
-                    i.color === item.color
-            )?.clientId!},
+                return updatedCartItems.find(
+                    (i) =>
+                        i.productIds[0] === item.productIds[0] &&
+                        i.size === item.size &&
+                        i.color === item.color
+                )?.clientId!},
             
             /**
              * Remove Item from Cart
-             * Filters out item by clientId
+             * Filters out item by clientId (sync)
              */
-            removeItem: async (clientId: string) => {
+            removeItem: (clientId: string) => {
                 const { items } = get().cart;
                 const updatedCartItems = items.filter((item) => item.clientId !== clientId);
                 
@@ -145,9 +149,7 @@ const useCartStore = create(
                     cart: {
                         ...get().cart,
                         items: updatedCartItems,
-                        ...(await calculateDateAndPrice(
-                            {items: updatedCartItems,}
-                        )),
+                        ...calculateDateAndPrice({ items: updatedCartItems }),
                     },
                 });
             },
@@ -155,10 +157,10 @@ const useCartStore = create(
             /**
              * Update Item Quantity
              * - Validates quantity (> 0 and <= stock)
-             * - Recalculates totalPrice
+             * - Recalculates totalPrice (sync)
              * - Updates cart totals
              */
-            updateQuantity: async (clientId: string, quantity: number) => {
+            updateQuantity: (clientId: string, quantity: number) => {
                 const { items } = get().cart;
                 const item = items.find((i) => i.clientId === clientId);
                 
@@ -184,9 +186,7 @@ const useCartStore = create(
                     cart: {
                         ...get().cart,
                         items: updatedCartItems,
-                        ...(await calculateDateAndPrice(
-                            {items: updatedCartItems,}
-                        )),
+                        ...calculateDateAndPrice({ items: updatedCartItems }),
                     },
                 });
             },

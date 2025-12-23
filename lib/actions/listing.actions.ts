@@ -36,45 +36,91 @@ export interface FilterOptions {
   ratingRange: { min: number; max: number };
 }
 
+// In-memory cache for filter options (10 minute TTL)
+let filterOptionsCache: { data: FilterOptions; timestamp: number } | null = null;
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+const defaultFilterOptions: FilterOptions = {
+  categories: [],
+  priceRange: { min: 0, max: 1000 },
+  dimensionsRange: {
+    width: { min: 0, max: 100 },
+    height: { min: 0, max: 100 },
+    depth: { min: 0, max: 100 },
+  },
+  reviewsRange: { min: 0, max: 1000 },
+  ratingRange: { min: 0, max: 5 },
+};
+
 export async function getFilterOptions(): Promise<FilterOptions> {
-  await connectToDB();
-
-  const products = await Product.find({ isPublished: true });
-
-  if (products.length === 0) {
-    return {
-      categories: [],
-      priceRange: { min: 0, max: 1000 },
-      dimensionsRange: {
-        width: { min: 0, max: 100 },
-        height: { min: 0, max: 100 },
-        depth: { min: 0, max: 100 },
-      },
-      reviewsRange: { min: 0, max: 1000 },
-      ratingRange: { min: 0, max: 5 },
-    };
+  // Return cached result if still valid
+  if (filterOptionsCache && Date.now() - filterOptionsCache.timestamp < CACHE_TTL_MS) {
+    return filterOptionsCache.data;
   }
 
-  const categories = [...new Set(products.map(p => p.category))];
-  
-  const prices = products.map(p => p.price);
-  const widths = products.map(p => p.dimensions?.width ?? 0);
-  const heights = products.map(p => p.dimensions?.height ?? 0);
-  const depths = products.map(p => p.dimensions?.depth ?? 0);
-  const reviews = products.map(p => p.numReviews ?? 0);
-  const ratings = products.map(p => p.avgRating ?? 0);
+  await connectToDB();
 
-  return {
-    categories,
-    priceRange: { min: Math.min(...prices), max: Math.max(...prices) },
-    dimensionsRange: {
-      width: { min: Math.min(...widths), max: Math.max(...widths) },
-      height: { min: Math.min(...heights), max: Math.max(...heights) },
-      depth: { min: Math.min(...depths), max: Math.max(...depths) },
+  // Use MongoDB aggregation instead of fetching all documents
+  const [aggregationResult] = await Product.aggregate([
+    { $match: { isPublished: true } },
+    {
+      $group: {
+        _id: null,
+        categories: { $addToSet: '$category' },
+        minPrice: { $min: '$price' },
+        maxPrice: { $max: '$price' },
+        minWidth: { $min: '$dimensions.width' },
+        maxWidth: { $max: '$dimensions.width' },
+        minHeight: { $min: '$dimensions.height' },
+        maxHeight: { $max: '$dimensions.height' },
+        minDepth: { $min: '$dimensions.depth' },
+        maxDepth: { $max: '$dimensions.depth' },
+        minReviews: { $min: '$numReviews' },
+        maxReviews: { $max: '$numReviews' },
+        minRating: { $min: '$avgRating' },
+        maxRating: { $max: '$avgRating' },
+      },
     },
-    reviewsRange: { min: Math.min(...reviews), max: Math.max(...reviews) },
-    ratingRange: { min: Math.min(...ratings), max: Math.max(...ratings) },
+  ]);
+
+  if (!aggregationResult) {
+    return defaultFilterOptions;
+  }
+
+  const result: FilterOptions = {
+    categories: aggregationResult.categories || [],
+    priceRange: {
+      min: aggregationResult.minPrice ?? 0,
+      max: aggregationResult.maxPrice ?? 1000,
+    },
+    dimensionsRange: {
+      width: {
+        min: aggregationResult.minWidth ?? 0,
+        max: aggregationResult.maxWidth ?? 100,
+      },
+      height: {
+        min: aggregationResult.minHeight ?? 0,
+        max: aggregationResult.maxHeight ?? 100,
+      },
+      depth: {
+        min: aggregationResult.minDepth ?? 0,
+        max: aggregationResult.maxDepth ?? 100,
+      },
+    },
+    reviewsRange: {
+      min: aggregationResult.minReviews ?? 0,
+      max: aggregationResult.maxReviews ?? 1000,
+    },
+    ratingRange: {
+      min: aggregationResult.minRating ?? 0,
+      max: aggregationResult.maxRating ?? 5,
+    },
   };
+
+  // Cache the result
+  filterOptionsCache = { data: result, timestamp: Date.now() };
+
+  return result;
 }
 
 export async function getFilteredProducts(filters: ProductFilters): Promise<{
@@ -184,11 +230,27 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
 
   const skip = (page - 1) * limit;
 
+  // Projection for list views (lighter payload)
+  const listProjection = {
+    name: 1,
+    slug: 1,
+    price: 1,
+    listPrice: 1,
+    images: { $slice: 2 },
+    avgRating: 1,
+    numReviews: 1,
+    countInStock: 1,
+    category: 1,
+    dimensions: 1,
+    tags: 1
+  };
+
   const [products, totalCount] = await Promise.all([
-    Product.find(conditions)
+    Product.find(conditions, listProjection)
       .sort(sortOptions)
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     Product.countDocuments(conditions),
   ]);
 

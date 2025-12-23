@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import {
   FilterSidebar,
@@ -16,6 +16,9 @@ import {
   getFilterOptions,
   ProductFilters,
 } from '@/lib/actions/listing.actions';
+
+// Revalidate products page every 5 minutes
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: 'Products | Shop',

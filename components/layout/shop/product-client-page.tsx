@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from "react";
-import Lenis from "@studio-freight/lenis"; // Note: removed /types to import the actual class
+import { useEffect, useRef } from "react";
+import Lenis from "@studio-freight/lenis";
 import ProductGallery from "@/components/layout/shop/product-gallery";
 import ProductDetailsInfo from "@/components/layout/shop/product-details";
-import { IProduct } from "@/lib/db/models/product.model"; // Ensure you have this type imported
+import { IProduct } from "@/lib/db/models/product.model";
 import ProductSlider from "./product-slider";
 import BrowsingHistoryList from "@/components/shared/browsing-history-list";
 import AddToBrowsingHistory from "@/components/shared/add-to-browsing-history";
@@ -15,10 +15,15 @@ interface ProductClientPageProps {
 }
 
 export default function ProductClientPage({ product, relatedProducts }: ProductClientPageProps) {
-    const [lenis, setLenis] = useState<Lenis | null>(null);
-    const rafRef = useRef<number | null>(null); // <-- track RAF id
+    const lenisRef = useRef<Lenis | null>(null);
+    const rafRef = useRef<number | null>(null);
 
     useEffect(() => {
+        // Skip smooth scroll if user prefers reduced motion
+        if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+
         const lenisInstance = new Lenis({
             duration: 1.2,
             easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -29,39 +34,44 @@ export default function ProductClientPage({ product, relatedProducts }: ProductC
             touchMultiplier: 2,
         });
 
-        setLenis(lenisInstance);
+        lenisRef.current = lenisInstance;
 
-        // use a named function for RAF so we can cancel it reliably
         function loop(time: number) {
             try {
-                // only call raf if lenisInstance still exists
-                if (lenisInstance && typeof (lenisInstance as any).raf === 'function') {
-                    lenisInstance.raf(time);
+                if (lenisRef.current && typeof (lenisRef.current as any).raf === 'function') {
+                    lenisRef.current.raf(time);
                 }
             } catch (err) {
-                // swallow errors to avoid propagation to extensions/devtools
-                // (keeps runtime stable if lenisInstance was destroyed)
-                // console.debug('lenis raf error', err);
+                // swallow errors
             }
             rafRef.current = requestAnimationFrame(loop);
         }
 
-        // start RAF loop and keep id in ref
+        // Pause on visibility change to save CPU
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                lenisRef.current?.stop();
+            } else {
+                lenisRef.current?.start();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         rafRef.current = requestAnimationFrame(loop);
 
         return () => {
-            // cancel RAF loop on unmount
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             if (rafRef.current !== null) {
                 cancelAnimationFrame(rafRef.current);
                 rafRef.current = null;
             }
-            // destroy Lenis instance
             try {
                 lenisInstance.destroy();
             } catch (e) {
                 // ignore destroy errors
             }
-        }
+            lenisRef.current = null;
+        };
     }, []);
 
     return (

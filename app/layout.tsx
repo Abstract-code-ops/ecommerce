@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Spectral, Tangerine, Karla } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/layout/header";
-import Footer from "@/components/shared/footer";
-import { ToastContainer } from 'react-toastify';
+import ToastProvider from "@/components/shared/toast-provider";
 import 'react-toastify/dist/ReactToastify.css';
+import { AuthProvider } from "@/lib/hooks/useAuth";
 
 // Configure Inter (Sans)
 const inter = Inter({
@@ -32,7 +31,7 @@ const karlaBold = Karla({
 })
 
 export const metadata: Metadata = {
-  title: "Paperly",
+  title: "Global Edge",
   description: "Paper bag ecommerce website",
 };
 
@@ -46,19 +45,10 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${spectral.variable} ${tangerine.variable} ${karlaBold.variable} antialiased bg-background max-w-full`}
       >
-        <ToastContainer
-          position="top-right"
-          autoClose={2000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
-        {children}
+        <AuthProvider>
+          <ToastProvider />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

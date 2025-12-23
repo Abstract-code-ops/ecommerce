@@ -3,6 +3,9 @@ import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
+// Track nested modals to avoid restoring overflow prematurely
+let modalCount = 0;
+
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,16 +16,27 @@ interface ModalProps {
 
 export const Modal = ({ isOpen, onClose, children, title, className }: ModalProps) => {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const previousOverflowRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
+      // Only capture previous overflow on first modal
+      if (modalCount === 0) {
+        previousOverflowRef.current = document.body.style.overflow;
+      }
+      modalCount++;
       document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
     }
 
     return () => {
-      document.body.style.overflow = "unset";
+      if (isOpen) {
+        modalCount--;
+        // Only restore when all modals are closed
+        if (modalCount === 0) {
+          document.body.style.overflow = previousOverflowRef.current ?? "unset";
+          previousOverflowRef.current = null;
+        }
+      }
     };
   }, [isOpen]);
 

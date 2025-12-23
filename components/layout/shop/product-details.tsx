@@ -1,7 +1,6 @@
 'use client'
 import React, { useState } from 'react';
-import { Star, Minus, Plus, CreditCard, Banknote } from 'lucide-react';
-import { p } from 'framer-motion/client';
+import { Star, Minus, Plus, Banknote } from 'lucide-react';
 import { IProduct } from '@/lib/db/models/product.model';
 import { formatCurrency } from '@/lib/utils';
 import AddToCartButton from './addToCart';

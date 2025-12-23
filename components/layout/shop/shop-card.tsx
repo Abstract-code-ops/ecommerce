@@ -127,7 +127,7 @@ export function ProductCard({
         const [intValue, decimalValue] = stringValue.includes('.') ? stringValue.split('.') : [stringValue, '']
 
         return (
-            <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between pt-3 px-1 gap-2 sm:gap-1">
+            <div className="mt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-3 px-1 gap-2 sm:gap-1">
                 {/* Left: Price & Deal Info */}
                 {plain ? formatCurrency(price):
                 (<div className="flex flex-col gap-1">
@@ -161,7 +161,7 @@ export function ProductCard({
 
                 {/* Right: Add to Cart Button */}
                 <AddToCartButton
-                    className="text-xs sm:text-[10px] md:text-xs font-inter rounded-2xl py-1.5 px-3 sm:py-1 sm:px-2 md:py-2 md:px-3 whitespace-nowrap min-w-fit"
+                    className="text-xs sm:text-[10px] md:text-xs font-inter rounded-2xl py-1.5 px-3 sm:py-1 sm:px-2 md:py-2 md:px-3 w-full sm:w-auto text-center"
                     price={price}
                     quantity={1}
                     text="Add to cart"
@@ -196,36 +196,84 @@ export function ProductCard({
             {/* 1. Image */}
             <ProductImage src={product.images[0]} alt={product.name} />
 
-            {/* Content Container */}
-            <div className="flex flex-1 flex-col p-4">
-                {/* 2. Title */}
+            {/* Content Container - Vertical Stack Layout */}
+            <div className="flex flex-1 flex-col p-4 space-y-2.5">
+                {/* 1. Title */}
                 <Link href={`/shop/products/${product.slug}`}>
-                    <h3 className=" line-clamp-2 text-base font-medium leading-tight text-stone-900 hover:text-secondary hover:underline">
-                        {product.name.length > 30 ? product.name.slice(0, 30) + "..." : product.name}
+                    <h3 className="line-clamp-2 text-base font-medium leading-tight text-stone-900 hover:text-secondary hover:underline">
+                        {product.name.length > 24 ? product.name.slice(0, 24) + "..." : product.name}
                     </h3>
                 </Link>
 
-                <div className="flex gap-2 items-center justify-between mt-2 pr-2">
+                {/* 2. Dimensions */}
+                {product.dimensions && showBottom && (
+                    <p className="text-xs text-muted-foreground/90 leading-relaxed">
+                        Size: {product.dimensions.width}cm × {product.dimensions.height}cm × {product.dimensions.depth}cm
+                    </p>
+                )}
 
-                {/* Dimensions */}
-                    {product.dimensions && showBottom && 
-                        <p className="text-sm text-muted-foreground/80 items-center">
-                            {product.dimensions.width}cm X {product.dimensions.height}cm X {product.dimensions.depth}cm
-                        </p>
-                    }
-                    {/* 3. Rating */}
-                    {showBottom && <div className="flex gap-1 items-center">
-                        <Rating rating={product.avgRating || 0} size={2} />
-                        <h3 className="text-sm">{`(${product.numReviews})`}</h3>
-                    </div>}
+                {/* 3. Price & Rating Row */}
+                <div className="flex items-center justify-between gap-2 pt-1">
+                    {/* Price */}
+                    <div className="flex flex-col gap-1">
+                        {isDeal && product.listPrice && product.listPrice > product.price ? (
+                            <>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="bg-red-900/90 px-1.5 py-0.5 text-[9px] font-medium tracking-wide text-white shadow-sm rounded-sm">
+                                        DEAL
+                                    </span>
+                                    <span className="text-[10px] font-medium text-red-800">
+                                        {Math.round(100 - (product.price / product.listPrice) * 100)}% off
+                                    </span>
+                                </div>
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className="text-md font-bold text-stone-800">
+                                        {formatCurrency(product.price)}
+                                    </span>
+                                    <span className="text-xs text-stone-400 line-through">
+                                        {formatCurrency(product.listPrice)}
+                                    </span>
+                                </div>
+                            </>
+                        ) : (
+                            <span className="text-md font-bold text-stone-800">
+                                {formatCurrency(product.price)}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Rating */}
+                    {showBottom && (
+                        <div className="flex flex-col items-end gap-0.5">
+                            <Rating rating={product.avgRating || 0} size={2} />
+                            <span className="text-[10px] text-muted-foreground/70">
+                                ({product.numReviews})
+                            </span>
+                        </div>
+                    )}
                 </div>
 
-                {/* 4. Bottom Section */}
-                <CardBottom
+                {/* 4. Add to Cart Button */}
+                <AddToCartButton
+                    className="w-full text-xs font-inter rounded-lg py-2.5 px-4 transition-all duration-200"
                     price={product.price}
-                    listPrice={product.listPrice}
-                    isDeal={isDeal}
-                    product={product}
+                    quantity={1}
+                    text="Add to cart"
+                    successText="Added!"
+                    cartColor="text-white"
+                    itemColor="bg-yellow-400"
+                    buttonColor="bg-primary hover:bg-gray-800"
+                    textColor="text-white"
+                    showPrice={false}
+                    product={{
+                        _id: product._id.toString(),
+                        name: product.name,
+                        slug: product.slug,
+                        category: product.category,
+                        images: product.images,
+                        price: product.price,
+                        countInStock: product.countInStock || 0
+                    }}
                 />
             </div>
         </div>

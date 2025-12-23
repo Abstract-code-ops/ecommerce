@@ -7,6 +7,7 @@ import Search from "./search";
 import data from "@/lib/data";
 import { MenuIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -68,9 +69,16 @@ export default function Header() {
           <div className="relative z-50 flex items-center justify-between py-3 px-5">
             <Link
               href="/shop"
-              className="flex items-center header-button font-extrabold text-2xl m-1"
+              className="flex items-center gap-3 header-button font-extrabold text-xl m-1"
             >
-              {App_NAME}
+              <Image
+                src="/images/logo-small.png"
+                alt={App_NAME}
+                width={50}
+                height={40}
+                className="object-contain"
+              />
+              <span>{App_NAME}</span>
             </Link>
 
             <div className="hidden md:block flex-1 max-w-xl">
@@ -116,9 +124,16 @@ export default function Header() {
           <div className="relative z-50 flex items-center justify-between py-3 px-5">
             <Link
               href="/shop"
-              className="flex items-center header-button font-extrabold text-2xl m-1"
+              className="flex items-center gap-3 header-button font-extrabold text-xl m-1"
             >
-              {App_NAME}
+              <Image
+                src="/images/logo-small.png"
+                alt={App_NAME}
+                width={50}
+                height={40}
+                className="object-contain"
+              />
+              <span>{App_NAME}</span>
             </Link>
 
             <div className="hidden md:block flex-1 max-w-xl">
@@ -186,3 +201,67 @@ export default function Header() {
     </>
   );
 }
+
+// Export header logic as a hook so other header implementations can reuse it
+// export function useHeaderLogic() {
+//   const [searchOpen, setSearchOpen] = useState(false);
+//   const closeSearch = () => setSearchOpen(false);
+
+//   const [isScrolled, setIsScrolled] = useState(false);
+
+//   useEffect(() => {
+//     const handleScroll = () => {
+//       if (window.scrollY > window.innerHeight * 0.01) {
+//         setIsScrolled(true);
+//       } else {
+//         setIsScrolled(false);
+//       }
+//     };
+
+//     window.addEventListener("scroll", handleScroll);
+//     return () => window.removeEventListener("scroll", handleScroll);
+//   }, []);
+
+//   const [mobileOpen, setMobileOpen] = useState(false);
+//   const [showSidebar, setShowSidebar] = useState(false);
+//   const TRANSITION_MS = 500;
+
+//   const openMobileMenu = () => {
+//     setMobileOpen(true);
+//     setTimeout(() => setShowSidebar(true), 10);
+//   };
+
+//   const closeMobileMenu = () => {
+//     setShowSidebar(false);
+//     setTimeout(() => setMobileOpen(false), TRANSITION_MS);
+//   };
+
+//   const openSearch = () => {
+//     if (mobileOpen) {
+//       setShowSidebar(false);
+//       setTimeout(() => setMobileOpen(false), TRANSITION_MS);
+//       setTimeout(() => setSearchOpen(true), 80);
+//       return;
+//     }
+//     setSearchOpen(true);
+//   };
+
+//   const { user, signOut, isLoading } = useAuth();
+
+//   return {
+//     searchOpen,
+//     setSearchOpen,
+//     closeSearch,
+//     openSearch,
+//     isScrolled,
+//     mobileOpen,
+//     openMobileMenu,
+//     closeMobileMenu,
+//     showSidebar,
+//     setShowSidebar,
+//     TRANSITION_MS,
+//     user,
+//     signOut,
+//     isLoading,
+//   };
+// }

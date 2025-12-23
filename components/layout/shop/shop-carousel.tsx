@@ -75,7 +75,7 @@ export function ShopCarousel({
             >
                 {items.map((item, index) => (
                     <SwiperSlide key={`${item.href}-${index}`}>
-                        <Link href={item.href} className="block relative w-full aspect-[3/1]">
+                        <Link href={item.href} className="block relative w-full aspect-3/1">
                             {/* Image Container */}
                             <div className="relative w-full h-full">
                                 <Image
