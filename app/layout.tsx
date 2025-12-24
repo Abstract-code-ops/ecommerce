@@ -4,6 +4,7 @@ import "./globals.css";
 import ToastProvider from "@/components/shared/toast-provider";
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from "@/lib/hooks/useAuth";
+import { Suspense } from "react";
 
 // Configure Inter (Sans)
 const inter = Inter({
@@ -45,10 +46,12 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${spectral.variable} ${tangerine.variable} ${karlaBold.variable} antialiased bg-background max-w-full`}
       >
-        <AuthProvider>
-          <ToastProvider />
-          {children}
-        </AuthProvider>
+        <Suspense fallback={<div>Loading...</div>}>
+          <AuthProvider>
+            <ToastProvider />
+            {children}
+          </AuthProvider>
+        </Suspense>
       </body>
     </html>
   );
