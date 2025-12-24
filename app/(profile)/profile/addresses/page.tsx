@@ -21,7 +21,7 @@ import {
   deleteAddress, 
   setDefaultAddress 
 } from '@/lib/actions/address.actions'
-import { Address as SupabaseAddress } from '@/types/supabase'
+import { Address, Address as SupabaseAddress } from '@/types/supabase'
 
 // Dynamic import for Map to avoid SSR issues
 const Map = dynamic(() => import('@/components/shared/map'), { ssr: false })
