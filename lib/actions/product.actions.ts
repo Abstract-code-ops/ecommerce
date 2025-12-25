@@ -1,3 +1,4 @@
+'use server'
 import { connectToDB } from "../db";
 import Product, { IProduct } from "../db/models/product.model";
 
@@ -118,4 +119,27 @@ export async function getProductStock(productId: string): Promise<{
     console.error('Error fetching product stock:', error)
     return { success: false, error: 'Failed to fetch stock' }
   }
+}
+
+// Get search suggestions (lightweight for autocomplete)
+export async function getSearchSuggestions(query: string) {
+    await connectToDB();
+    
+    if (!query) return [];
+
+    const products = await Product.find({
+        isPublished: true,
+        $text: { $search: query }
+    }, {
+        name: 1,
+        slug: 1,
+        price: 1,
+        images: { $slice: 1 },
+        category: 1
+    })
+    .sort({ score: { $meta: "textScore" } })
+    .limit(5)
+    .lean();
+
+    return serialize(products) as IProduct[];
 }

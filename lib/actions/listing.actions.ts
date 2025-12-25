@@ -154,7 +154,7 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
   // Build query conditions
   const conditions: Record<string, unknown> = { isPublished: true };
 
-  if (category) {
+  if (category && category !== 'all') {
     conditions.category = category;
   }
 
@@ -199,15 +199,15 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
   }
 
   if (search) {
-    conditions.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } },
-      { tags: { $in: [new RegExp(search, 'i')] } },
-    ];
+    conditions.$text = { $search: search };
   }
 
   // Build sort options
-  let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
+  let sortOptions: Record<string, any> = { createdAt: -1 };
+
+  if (search) {
+    sortOptions = { score: { $meta: "textScore" } };
+  }
   
   switch (sort) {
     case 'price-asc':
@@ -224,7 +224,9 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
       break;
     case 'newest':
     default:
-      sortOptions = { createdAt: -1 };
+      if (!search) {
+        sortOptions = { createdAt: -1 };
+      }
       break;
   }
 

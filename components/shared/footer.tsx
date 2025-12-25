@@ -6,11 +6,11 @@ import { App_NAME } from '@/lib/constants'
 
 const Footer = () => {
   return (
-    <footer className="bg-primary text-white underline-link">
+    <footer className="bg-black text-white underline-link">
       <div className="w-full">
         <Button
           variant="ghost"
-          className='bg-gray-800 w-full rounded-none'
+          className='bg-secondary w-full rounded-none'
           onClick={
             () => window.scrollTo({ top:0, behavior: 'smooth' })
           }

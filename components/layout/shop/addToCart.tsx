@@ -1,12 +1,16 @@
 'use client'
-import React, { useState } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import React, { useState, lazy, Suspense } from 'react';
 import { ShoppingCart, Check, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency, generateId } from '@/lib/utils';
 import { toast } from 'react-toastify';
 import useCartStore from '@/lib/hooks/useCartStore';
 import { OrderItem } from '@/types';
+
+// Lazy load framer-motion - only loaded when animation is needed
+const MotionDiv = lazy(() => 
+  import('framer-motion').then(mod => ({ default: mod.motion.div }))
+);
 
 // Helper function to fetch stock via API route (avoids importing server-side code)
 async function getProductStock(productId: string): Promise<{ success: boolean; stock?: number; error?: string }> {
@@ -60,7 +64,6 @@ const AddToCartButton = ({
   showPrice?: boolean; // <-- type added
 }) => {
   const [status, setStatus] = useState('idle'); // 'idle', 'animating', 'success', 'checking'
-  const controls = useAnimation();
   const { addItem } = useCartStore();
 
   // Check if product is out of stock (based on initial data)
@@ -132,12 +135,8 @@ const AddToCartButton = ({
 
     setStatus('animating');
 
-    // 1. Reset positions just in case
-    await controls.start("initial");
-
-    // 2. Start Animation Sequence
-    // We run these animations in parallel or sequence using the variants below
-    await new Promise((resolve) => setTimeout(resolve, 1500)); // Wait for animation duration
+    // Wait for animation duration
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     setStatus('success');
 
@@ -184,51 +183,55 @@ const AddToCartButton = ({
         {successText}
       </span>
 
-      {/* 3. The Animation Layer */}
+      {/* 3. The Animation Layer - Lazy loaded */}
       {status === 'animating' && (
-        <div className="absolute inset-0 z-10">
-          
-          {/* The Moving Cart Wrapper */}
-          <motion.div
-            initial={{ x: -100, opacity: 0 }}
-            animate={{ 
-              x: [ -80, 0, 0, 200 ], // Slide in, stop, stay, slide out
-              opacity: [0, 1, 1, 0] 
-            }} 
-            transition={{ 
-              duration: 2, 
-              times: [0, 0.3, 0.7, 1], // Timing percentages for the keyframes
-              ease: "easeInOut" 
-            }}
-            className="absolute left-1/2 top-1/2 -ml-3 -mt-3" // Center the cart visually
-          >
-            {/* The Cart Icon */}
-            <ShoppingCart className={`h-5 w-5 ${cartColor}`} />
-            
-            {/* 4. The Falling Icon Wrapper */}
-            <motion.div
-              initial={{ y: -50, scale: 0, opacity: 0 }}
-              animate={{ 
-                y: [ -40, 5, 4, 4 ], // Tweaked y:5 to make it drop *into* the cart deeper
-                scale: [0.5, 1, 1, 1],
-                opacity: 1,
-                rotate: [0, -15, 0, 0] // Added slight rotation for tumbling effect
-              }}
-              transition={{ 
-                duration: 2, 
-                times: [0, 0.35, 0.4, 1], 
-                ease: [0, 0.6, 0.4, 1.2] 
-              }}
-              className="absolute -top-3 left-1" // Adjusted position to center icon in cart
-            >
-              {/* Render the passed icon or default Package */}
-              <ItemIcon className={`h-4 w-4 ${itemColor} bg-transparent`} /> 
-            </motion.div>
-          </motion.div>
-        </div>
+        <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center"><ShoppingCart className="h-5 w-5 animate-bounce" /></div>}>
+          <AnimationLayer cartColor={cartColor} itemColor={itemColor} ItemIcon={ItemIcon} />
+        </Suspense>
       )}
     </button>
   );
 };
+
+// Separate animation component to enable lazy loading
+function AnimationLayer({ cartColor, itemColor, ItemIcon }: { cartColor: string; itemColor: string; ItemIcon: React.ElementType }) {
+  return (
+    <div className="absolute inset-0 z-10">
+      <MotionDiv
+        initial={{ x: -100, opacity: 0 }}
+        animate={{ 
+          x: [ -80, 0, 0, 200 ],
+          opacity: [0, 1, 1, 0] 
+        }} 
+        transition={{ 
+          duration: 2, 
+          times: [0, 0.3, 0.7, 1],
+          ease: "easeInOut" 
+        }}
+        className="absolute left-1/2 top-1/2 -ml-3 -mt-3"
+      >
+        <ShoppingCart className={`h-5 w-5 ${cartColor}`} />
+        
+        <MotionDiv
+          initial={{ y: -50, scale: 0, opacity: 0 }}
+          animate={{ 
+            y: [ -40, 5, 4, 4 ],
+            scale: [0.5, 1, 1, 1],
+            opacity: 1,
+            rotate: [0, -15, 0, 0]
+          }}
+          transition={{ 
+            duration: 2, 
+            times: [0, 0.35, 0.4, 1], 
+            ease: [0, 0.6, 0.4, 1.2] 
+          }}
+          className="absolute -top-3 left-1"
+        >
+          <ItemIcon className={`h-4 w-4 ${itemColor} bg-transparent`} /> 
+        </MotionDiv>
+      </MotionDiv>
+    </div>
+  );
+}
 
 export default AddToCartButton;

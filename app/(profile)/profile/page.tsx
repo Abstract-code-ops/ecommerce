@@ -10,8 +10,9 @@ import { toast } from 'react-toastify'
 import { createClient } from '@/lib/supabase/client'
 import { 
   User, Mail, Phone, Calendar, Edit3, Save, X, 
-  Camera, Shield, Bell, Loader2, CheckCircle2
+  Camera, Shield, Bell, Loader2, CheckCircle2,
 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function ProfilePage() {
   const { user, isLoading } = useAuth()
@@ -241,6 +242,7 @@ export default function ProfilePage() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link href='/profile/settings'>
         <motion.div
           whileHover={{ scale: 1.01 }}
           className="bg-card border border-border/50 rounded-2xl p-5 cursor-pointer hover:border-primary/30 transition-colors"
@@ -254,8 +256,9 @@ export default function ProfilePage() {
               <p className="text-sm text-muted-foreground">Manage password & 2FA</p>
             </div>
           </div>
-        </motion.div>
+        </motion.div></Link>
 
+        <Link href='/profile/settings#notifications'>
         <motion.div
           whileHover={{ scale: 1.01 }}
           className="bg-card border border-border/50 rounded-2xl p-5 cursor-pointer hover:border-primary/30 transition-colors"
@@ -270,6 +273,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </motion.div>
+        </Link>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,17 +14,43 @@ import {
   ChevronRight, Check
 } from 'lucide-react'
 
+const PASSWORD_CHANGED_KEY = 'gmqg_password_changed_at'
+
+function getPasswordChangedDate(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(PASSWORD_CHANGED_KEY)
+}
+
+function setPasswordChangedDate(date: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(PASSWORD_CHANGED_KEY, date)
+  }
+}
+
+function formatPasswordDate(dateString: string | null): string {
+  if (!dateString) return 'Never changed'
+  
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - date.getTime())
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 0) return 'Changed today'
+  if (diffDays === 1) return 'Changed yesterday'
+  if (diffDays < 7) return `Changed ${diffDays} days ago`
+  if (diffDays < 30) return `Changed ${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`
+  if (diffDays < 365) return `Changed ${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`
+  return `Changed ${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) > 1 ? 's' : ''} ago`
+}
+
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
   const supabase = createClient()
   
   const [isChangingPassword, setIsChangingPassword] = useState(false)
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  })
-  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [isSendingResetEmail, setIsSendingResetEmail] = useState(false)
+  const [resetEmailSent, setResetEmailSent] = useState(false)
+  const [passwordChangedAt, setPasswordChangedAt] = useState<string | null>(null)
   
   const [notifications, setNotifications] = useState({
     orderUpdates: true,
@@ -33,26 +59,32 @@ export default function SettingsPage() {
     security: true,
   })
 
-  const [preferences, setPreferences] = useState({
-    theme: 'system',
-    language: 'en',
-  })
+  useEffect(() => {
+    // Load password changed date from localStorage
+    const savedDate = getPasswordChangedDate()
+    setPasswordChangedAt(savedDate)
+  }, [])
 
-  const handlePasswordChange = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('New passwords do not match')
+  const handleSendPasswordResetEmail = async () => {
+    if (!user?.email) {
+      toast.error('No email address found')
       return
     }
 
-    if (passwordData.newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters')
-      return
-    }
-
-    setIsSavingPassword(true)
+    setIsSendingResetEmail(true)
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordData.newPassword
+      const getURL = () => {
+        let url =
+          process?.env?.NEXT_PUBLIC_SITE_URL ??
+          process?.env?.NEXT_PUBLIC_VERCEL_URL ??
+          'http://localhost:3000/'
+        url = url.startsWith('http') ? url : `https://${url}`
+        url = url.endsWith('/') ? url : `${url}/`
+        return url
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${getURL()}auth/callback?next=/reset-password`,
       })
 
       if (error) {
@@ -60,13 +92,15 @@ export default function SettingsPage() {
         return
       }
 
-      toast.success('Password updated successfully')
-      setIsChangingPassword(false)
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      setResetEmailSent(true)
+      toast.success('Password reset link sent to your email!')
+      
+      // Update the password changed date when they complete the reset
+      // This will be updated when they actually change the password
     } catch (error) {
-      toast.error('Failed to update password')
+      toast.error('Failed to send reset email')
     } finally {
-      setIsSavingPassword(false)
+      setIsSendingResetEmail(false)
     }
   }
 
@@ -111,13 +145,14 @@ export default function SettingsPage() {
                 <Lock className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium text-sm">Password</p>
-                  <p className="text-xs text-muted-foreground">Last changed 30 days ago</p>
+                  <p className="text-xs text-muted-foreground">{formatPasswordDate(passwordChangedAt)}</p>
                 </div>
               </div>
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => setIsChangingPassword(!isChangingPassword)}
+                className='cursor-pointer'
               >
                 {isChangingPassword ? 'Cancel' : 'Change'}
               </Button>
@@ -128,40 +163,55 @@ export default function SettingsPage() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mt-4 space-y-3"
+                className="mt-4 space-y-4"
               >
-                <Input
-                  type="password"
-                  placeholder="Current password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                />
-                <Input
-                  type="password"
-                  placeholder="New password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                />
-                <Input
-                  type="password"
-                  placeholder="Confirm new password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                />
-                <Button 
-                  onClick={handlePasswordChange}
-                  disabled={isSavingPassword}
-                  className="w-full"
-                >
-                  {isSavingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Update Password
-                </Button>
+                {!resetEmailSent ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      For security, we&apos;ll send a password reset link to your email address: <strong>{user?.email}</strong>
+                    </p>
+                    <Button 
+                      onClick={handleSendPasswordResetEmail}
+                      disabled={isSendingResetEmail}
+                      className="w-full"
+                    >
+                      {isSendingResetEmail && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Send Password Reset Link
+                    </Button>
+                  </>
+                ) : (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                        <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm text-green-800 dark:text-green-300">Check your email</p>
+                        <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                          We&apos;ve sent a password reset link to <strong>{user?.email}</strong>. 
+                          Click the link in the email to set your new password.
+                        </p>
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="p-0 h-auto mt-2 text-green-700 dark:text-green-400"
+                          onClick={() => {
+                            setResetEmailSent(false)
+                            handleSendPasswordResetEmail()
+                          }}
+                        >
+                          Didn&apos;t receive it? Send again
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </div>
 
           {/* Two-Factor Auth */}
-          <div className="p-5">
+          {/* <div className="p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Smartphone className="w-5 h-5 text-muted-foreground" />
@@ -174,10 +224,10 @@ export default function SettingsPage() {
                 Coming Soon
               </Button>
             </div>
-          </div>
+          </div> */}
 
           {/* Active Sessions */}
-          <div className="p-5">
+          {/* <div className="p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Eye className="w-5 h-5 text-muted-foreground" />
@@ -188,12 +238,12 @@ export default function SettingsPage() {
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 
       {/* Notifications Section */}
-      <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
+      <div className="bg-card border border-border/50 rounded-2xl overflow-hidden" id='notifications'>
         <div className="p-5 border-b border-border/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -246,74 +296,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Preferences Section */}
-      <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
-        <div className="p-5 border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-              <Globe className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Preferences</h2>
-              <p className="text-xs text-muted-foreground">Customize your experience</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="divide-y divide-border/50">
-          {/* Theme */}
-          <div className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {preferences.theme === 'dark' ? (
-                  <Moon className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <Sun className="w-5 h-5 text-muted-foreground" />
-                )}
-                <div>
-                  <p className="font-medium text-sm">Theme</p>
-                  <p className="text-xs text-muted-foreground">Choose light or dark mode</p>
-                </div>
-              </div>
-              <div className="flex gap-1 bg-muted rounded-lg p-1">
-                {['light', 'dark', 'system'].map((theme) => (
-                  <button
-                    key={theme}
-                    onClick={() => setPreferences(prev => ({ ...prev, theme }))}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                      preferences.theme === theme
-                        ? 'bg-background shadow-sm text-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {theme.charAt(0).toUpperCase() + theme.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Language */}
-          <div className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Globe className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium text-sm">Language</p>
-                  <p className="text-xs text-muted-foreground">Select your preferred language</p>
-                </div>
-              </div>
-              <select 
-                value={preferences.language}
-                onChange={(e) => setPreferences(prev => ({ ...prev, language: e.target.value }))}
-                className="bg-muted border-none rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="en">English</option>
-                <option value="ar">العربية</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Danger Zone */}
       <div className="bg-card border border-red-200 dark:border-red-900/50 rounded-2xl overflow-hidden">

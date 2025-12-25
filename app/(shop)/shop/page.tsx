@@ -5,10 +5,12 @@ import BrowsingHistoryList from "@/components/shared/browsing-history-list"
 import { getProductByTag, getFeaturedProducts } from "@/lib/actions/product.actions"
 import data from "@/lib/data"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import { Suspense } from "react"
 
-// Reduce revalidation time for fresher stock data
-export const revalidate = 60; // 1 minute instead of 5
+// Increase revalidation time for better caching (5 minutes)
+export const revalidate = 300;
 
 // Define categories for navigation with images
 const categories = [
@@ -57,10 +59,15 @@ export default async function Page() {
                             {/* Background Image with Overlay */}
                             <div className="absolute inset-0">
                                 <div className="relative w-full h-full">
-                                    <img
+                                    <Image
                                         src={cat.image}
                                         alt={cat.name}
-                                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                                        fill
+                                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                                        sizes="(max-width: 768px) 100vw, 33vw"
+                                        loading={index === 0 ? "eager" : "lazy"}
+                                        priority={index === 0}
+                                        unoptimized
                                     />
                                     {/* Gradient Overlay */}
                                     <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/30 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300" />
@@ -143,10 +150,12 @@ export default async function Page() {
                 </div>
             </section>
 
-            {/* Browsing History */}
-            <section className="px-4 md:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-                <BrowsingHistoryList />
-            </section>
+            {/* Browsing History - Lazy loaded since it's below the fold */}
+            <Suspense fallback={<div className="px-4 md:px-6 lg:px-8 max-w-7xl mx-auto w-full h-48" />}>
+                <section id="browsing-history" className="px-4 md:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+                    <BrowsingHistoryList />
+                </section>
+            </Suspense>
         </div>
     )
 }

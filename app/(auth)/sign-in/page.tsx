@@ -171,7 +171,7 @@ const SignInPage = () => {
                 <input type="checkbox" className="checkbox checkbox-primary" id="rememberMe" />
                 <label className="label-text text-base-content/80 p-0 text-base" htmlFor="rememberMe">Remember Me</label>
               </div>
-              <a href="#" className="link link-animated link-primary font-normal">Forgot Password?</a>
+              <Link href="/forgot-password" className="link link-animated link-primary font-normal">Forgot Password?</Link>
             </div>
             <button 
               className="btn btn-lg btn-primary btn-block"

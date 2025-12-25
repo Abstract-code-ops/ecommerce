@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { App_NAME } from "@/lib/constants";
 import Link from "next/link";
 import Menu from "./menu";
@@ -34,22 +34,27 @@ export default function Header() {
     };
   }, [mobileOpen]);
 
-  // New: scroll listener to detect when the original header is out of view
+  // Optimized scroll listener with throttling
   useEffect(() => {
+    let ticking = false;
+    
     const onScroll = () => {
-      const el = headerRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      // when bottom <= 0 the header has scrolled fully out of view
-      setShowSticky(rect.bottom <= 0);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const el = headerRef.current;
+          if (!el) return;
+          const rect = el.getBoundingClientRect();
+          setShowSticky(rect.bottom <= 0);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
     return () => {
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
     };
   }, []);
 

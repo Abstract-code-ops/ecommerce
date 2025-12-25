@@ -530,10 +530,10 @@ const data: Data = {
         { name: "Shop", href: '/shop' },
         { name: "Categories", href: '/shop/products' },
         { name: "Deals & Offers", href: '/shop/products?deals=true' },
-        { name: "Browsing History", href: '/history' },
+        { name: "Browsing History", href: '/shop#browsing-history' },
         // { name: "Customer Service", href: '/page/customer-service' },
-        { name: "About Us", href: '/page/about-us' },
-        { name: "Contact Us", href: '/page/contact-us' },
+        // { name: "About Us", href: '/about' },
+        { name: "Contact Us", href: '/contact' },
     ],
     carousels: [
         {
