@@ -31,12 +31,12 @@ export async function POST(request: Request) {
       from: process.env.RESEND_FROM_EMAIL || "Contact Form <onboarding@resend.dev>",
       to: process.env.CONTACT_EMAIL || "delivered@resend.dev",
       subject: `New Contact Form Submission from ${name}`,
-      react: ContactEmailTemplate({
-        name,
-        email,
-        phone,
-        message,
-      }),
+      react: <ContactEmailTemplate
+        name={name}
+        email={email}
+        phone={phone}
+        message={message}
+      />,
     });
 
     if (error) {
@@ -52,13 +52,13 @@ export async function POST(request: Request) {
       from: process.env.RESEND_FROM_EMAIL || "Contact Form <onboarding@resend.dev>",
       to: email,
       subject: "Thank you for contacting us!",
-      react: ContactEmailTemplate({
-        name,
-        email,
-        phone,
-        message,
-        isConfirmation: true,
-      }),
+      react: <ContactEmailTemplate
+        name={name}
+        email={email}
+        phone={phone}
+        message={message}
+        isConfirmation={true}
+      />,
     });
 
     return NextResponse.json(
