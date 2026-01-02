@@ -17,9 +17,7 @@ export default function AdminLayout({
 
   // Check if user is admin - add more emails to the array as needed
   const adminEmails = ['admin@globaledge.ae']
-  const isAdmin = adminEmails.includes(user?.email || '') || 
-  //                 user?.user_metadata?.role === 'admin' ||
-  //                 user?.app_metadata?.role === 'admin'
+  const isAdmin: boolean = adminEmails.includes(user?.email || '')
 
 
   useEffect(() => {
