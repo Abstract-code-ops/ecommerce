@@ -28,7 +28,7 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
     <div className="max-w-4xl flex flex-col gap-4 relative mx-auto">
       
       {/* Main Swiper */}
-      <div className="relative w-full overflow-hidden bg-gray-50 group">
+      <div className="relative w-full overflow-hidden bg-muted rounded-xl group">
         <Swiper
           loop={true}
           spaceBetween={10}
@@ -64,15 +64,15 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
         </Swiper>
 
         {/* Custom Navigation Arrows (Hidden on mobile, visible on desktop hover) */}
-        <button className="custom-prev absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-black p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hidden lg:block shadow-md cursor-pointer">
-          <ChevronLeft size={24} />
+        <button className="custom-prev absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-card/90 backdrop-blur-sm hover:bg-card text-foreground p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hidden lg:flex items-center justify-center shadow-lg border border-border cursor-pointer hover:scale-105">
+          <ChevronLeft size={20} />
         </button>
-        <button className="custom-next absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-black p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hidden lg:block shadow-md cursor-pointer">
-          <ChevronRight size={24} />
+        <button className="custom-next absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-card/90 backdrop-blur-sm hover:bg-card text-foreground p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hidden lg:flex items-center justify-center shadow-lg border border-border cursor-pointer hover:scale-105">
+          <ChevronRight size={20} />
         </button>
 
         {/* Mobile Page Counter overlay */}
-        <div className="absolute top-4 right-4 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded-md lg:hidden">
+        <div className="absolute top-4 right-4 z-10 bg-foreground/80 backdrop-blur-sm text-background text-xs font-medium px-3 py-1.5 rounded-full lg:hidden">
           {activeIndex + 1} / {images.length}
         </div>
 
@@ -97,18 +97,18 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
                     }}
                 >
                     {images.map((img, index) => (
-                    <SwiperSlide key={`thumb-${index}`} className="!w-20 !h-20 rounded-md overflow-hidden cursor-pointer">
+                    <SwiperSlide key={`thumb-${index}`} className="!w-20 !h-20 rounded-lg overflow-hidden cursor-pointer">
                         <div className="relative w-full h-full">
                             <Image
                                 src={img}
                                 alt={`Thumbnail ${index + 1}`}
                                 fill
-                                className="object-cover"
+                                className="object-cover transition-transform duration-300 hover:scale-110"
                                 unoptimized
                             />
-                            <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent transition-all" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-foreground/30 to-transparent transition-all" />
                             {/* Active State Overlay handled by CSS below */}
-                            <div className="absolute inset-0 ring-2 ring-transparent transition-all thumb-border" />
+                            <div className="absolute inset-0 ring-2 ring-transparent transition-all thumb-border rounded-lg" />
                         </div>
                     </SwiperSlide>
                     ))}

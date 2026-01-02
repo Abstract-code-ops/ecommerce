@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import useCartStore from '@/lib/hooks/useCartStore'
+import useWishlistStore from '@/lib/hooks/useWishlistStore'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { formatCurrency } from '@/lib/utils'
 import Image from 'next/image'
@@ -11,20 +12,19 @@ import {
   ChevronRight, Shield, Truck, RotateCcw, Tag, 
   Clock, Package, Heart, AlertCircle, User, LogIn,
   MapPin, Check, ChevronDown, Home, Building2, Loader2,
-  CheckCircle2
+  CheckCircle2, ArrowLeft, Lock, Mail
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import ShippingAddressForm from '@/components/shared/shipping-address-form'
 import { getAddresses, createAddress } from '@/lib/actions/address.actions'
 import { createOrder, validateCartStock } from '@/lib/actions/order.actions'
 import { Address, ShippingAddressSnapshot, ProductSnapshot } from '@/types/supabase'
-import { Separator } from '@/components/ui/separator'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 
 const CartPage = () => {
   const router = useRouter();
   const { cart, removeItem, updateQuantity, clearCart, setPaymentMethod } = useCartStore();
+  const { items: wishlistItems, toggleItem: toggleWishlist, isInWishlist } = useWishlistStore();
   const { user, isLoading: isAuthLoading } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
@@ -37,6 +37,9 @@ const CartPage = () => {
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isAddressDropdownOpen, setIsAddressDropdownOpen] = useState(false);
+  
+  // Guest checkout state
+  const [guestEmail, setGuestEmail] = useState('');
   
   // Guest address state (when not logged in)
   const [guestAddress, setGuestAddress] = useState<{
@@ -222,12 +225,6 @@ const CartPage = () => {
   // Handle checkout - update to show specific out of stock errors
   const handleCheckout = async () => {
     // Validation
-    if (!user) {
-      toast.error('Please sign in to checkout');
-      router.push('/sign-in?redirect=/cart');
-      return;
-    }
-
     if (cart.paymentMethod !== 'CashOnDelivery') {
       toast.error('Please select Cash on Delivery as payment method');
       return;
@@ -237,6 +234,21 @@ const CartPage = () => {
     if (!shippingAddress) {
       toast.error('Please select or add a shipping address');
       return;
+    }
+
+    // For guest users, require email
+    if (!user && !guestEmail) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    // Validate email format for guests
+    if (!user && guestEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(guestEmail)) {
+        toast.error('Please enter a valid email address');
+        return;
+      }
     }
 
     if (cart.items.length === 0) {
@@ -278,6 +290,7 @@ const CartPage = () => {
         tax: cart.taxPrice || 0,
         discount: 0,
         paymentMethod: 'CashOnDelivery',
+        guestEmail: !user ? guestEmail : undefined,
       });
 
       if (result.success && result.data) {
@@ -361,498 +374,660 @@ const CartPage = () => {
   // Order success state
   if (checkoutSuccess) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="text-center max-w-md animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-            <CheckCircle2 className="w-10 h-10 text-emerald-600" strokeWidth={1.5} />
+      <div className="min-h-[70vh] flex items-center justify-center px-4 bg-background">
+        <div className="text-center max-w-md animate-fade-in">
+          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <CheckCircle2 className="w-12 h-12 text-primary" strokeWidth={1.5} />
           </div>
-          <h1 className="text-2xl font-semibold mb-2 text-foreground/90">Order Placed Successfully!</h1>
-          <p className="text-muted-foreground text-sm mb-2">
+          <h1 className="font-serif text-3xl md:text-4xl mb-4 text-foreground">Order Confirmed</h1>
+          <p className="text-muted-foreground mb-2">
             Thank you for your order. Your order number is:
           </p>
-          <p className="font-mono text-lg font-semibold text-primary mb-6">
+          <p className="font-mono text-xl font-semibold text-primary mb-6 bg-primary/5 py-3 px-6 rounded-lg inline-block">
             {checkoutSuccess.orderNumber}
           </p>
-          <p className="text-muted-foreground text-xs mb-6">
-            You&apos;ll pay <strong>Cash on Delivery</strong> when your order arrives.
+          <p className="text-sm text-muted-foreground mb-8">
+            You&apos;ll pay <span className="font-medium text-foreground">Cash on Delivery</span> when your order arrives.
           </p>
-          <div className="flex gap-3 justify-center">
-            <Button asChild variant="outline">
-              <Link href="/profile/orders">View Orders</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/shop">Continue Shopping</Link>
-            </Button>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <Link 
+              href="/profile/orders"
+              className="px-6 py-3 border border-border rounded-lg font-medium hover:bg-muted transition-colors"
+            >
+              View Orders
+            </Link>
+            <Link 
+              href="/shop"
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors btn-hover-lift"
+            >
+              Continue Shopping
+            </Link>
           </div>
         </div>
       </div>
     );
   }
 
+  // Empty cart state
   if (!cart.items || cart.items.length === 0) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="text-center max-w-md animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted/50 flex items-center justify-center">
-            <ShoppingBag className="w-10 h-10 text-muted-foreground/60" strokeWidth={1.5} />
+      <div className="min-h-[70vh] flex items-center justify-center px-4 bg-background">
+        <div className="text-center max-w-md animate-fade-in">
+          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-muted flex items-center justify-center">
+            <ShoppingBag className="w-12 h-12 text-muted-foreground/60" strokeWidth={1.5} />
           </div>
-          <h1 className="text-2xl font-semibold mb-2 text-foreground/90">Your cart is empty</h1>
-          <p className="text-muted-foreground text-sm mb-6">
-            Looks like you haven&apos;t added anything to your cart yet.
+          <h1 className="font-serif text-3xl md:text-4xl mb-4 text-foreground">Your Cart is Empty</h1>
+          <p className="text-muted-foreground mb-8">
+            Looks like you haven&apos;t added anything to your cart yet. Explore our collection to find something special.
           </p>
-          <Button asChild size="lg" className="px-8">
-            <Link href="/shop">Start Shopping</Link>
-          </Button>
+          <Link 
+            href="/shop"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors btn-hover-lift"
+          >
+            Start Shopping
+            <ChevronRight className="w-4 h-4" />
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 md:py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5 animate-in fade-in-0 slide-in-from-left-2 duration-300">
-        <div className="flex items-center gap-2">
-          <ShoppingBag className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-          <h1 className="text-xl md:text-2xl font-semibold text-foreground/90">Shopping Cart</h1>
-          <span className="text-xs md:text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {cart.items.length} {cart.items.length === 1 ? 'item' : 'items'}
-          </span>
+    <div className="bg-background min-h-screen">
+      {/* Page Header */}
+      <div className="bg-card border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/shop" 
+              className="p-2 hover:bg-muted rounded-full transition-colors"
+              aria-label="Back to shop"
+            >
+              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+            </Link>
+            <div>
+              <h1 className="font-serif text-2xl md:text-3xl text-foreground">Shopping Cart</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {cart.items.length} {cart.items.length === 1 ? 'item' : 'items'} in your cart
+              </p>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={handleClearCart}
-          className="text-xs text-muted-foreground hover:text-destructive transition-colors duration-200"
-        >
-          Clear all
-        </button>
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4 animate-in fade-in-0 slide-in-from-left-4 duration-500 delay-150">
-          {/* Stock validation loading indicator */}
-          {isValidatingStock && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Checking stock availability...
-            </div>
-          )}
-          
-          {/* Out of stock warning banner */}
-          {hasOutOfStockItems && !isValidatingStock && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-800/30 rounded-lg text-xs md:text-sm text-red-700 dark:text-red-400">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>Some items in your cart are out of stock. Please remove them to proceed.</span>
-            </div>
-          )}
-          
-          <div className="bg-card border border-border/50 rounded-lg overflow-hidden">
-            {cart.items.map((item, index) => {
-              const itemStock = stockStatus.get(item.productIds[0])
-              const isOutOfStock = itemStock && !itemStock.isAvailable
-              const availableStock = itemStock?.availableStock ?? item.countInStock
-              
-              return (
-                <React.Fragment key={item.clientId}>
-                  <div className={`p-4 transition-colors duration-200 relative ${isOutOfStock ? 'bg-muted/50' : 'hover:bg-muted/30'}`}>
-                    {/* Out of Stock Overlay */}
-                    {isOutOfStock && (
-                      <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
-                        <div className="bg-red-500/90 text-white px-4 py-2 rounded-lg font-medium text-sm shadow-lg flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          Out of Stock
-                          {availableStock > 0 && (
-                            <span className="text-xs opacity-80">
-                              (Only {availableStock} available)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="flex gap-4">
-                      {/* Product Image */}
-                      <Link href={`/shop/products/${item.slug}`} className="shrink-0">
-                        <div className={`relative w-20 h-20 md:w-24 md:h-24 rounded-md overflow-hidden bg-muted/50 group ${isOutOfStock ? 'opacity-50' : ''}`}>
-                          <Image
-                            src={item.image}
-                            alt={item.name}
-                            fill
-                            sizes="(max-width: 640px) 80px, 96px"
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            unoptimized
-                          />
-                        </div>
-                      </Link>
 
-                      {/* Product Details */}
-                      <div className={`flex-1 min-w-0 ${isOutOfStock ? 'opacity-50' : ''}`}>
-                        <div className="flex justify-between items-start gap-2">
-                          <div className="min-w-0">
-                            <Link 
-                              href={`/shop/products/${item.slug}`}
-                              className="font-medium text-sm md:text-base text-foreground/90 hover:text-primary transition-colors line-clamp-1"
-                            >
-                              {item.name}
-                            </Link>
-                            <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
-                              {formatCurrency(item.price)}
-                            </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          
+          {/* Cart Items Section */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Stock validation loading indicator */}
+            {isValidatingStock && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-4 py-3 animate-pulse">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Checking stock availability...
+              </div>
+            )}
+            
+            {/* Out of stock warning banner */}
+            {hasOutOfStockItems && !isValidatingStock && (
+              <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <span>Some items in your cart are out of stock. Please remove them to proceed with checkout.</span>
+              </div>
+            )}
+
+            {/* Cart Items */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="p-4 md:p-6 border-b border-border flex items-center justify-between">
+                <span className="font-medium text-foreground">Cart Items</span>
+                <button
+                  onClick={handleClearCart}
+                  className="text-sm text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  Clear all
+                </button>
+              </div>
+
+              <div className="divide-y divide-border">
+                {cart.items.map((item) => {
+                  const itemStock = stockStatus.get(item.productIds[0])
+                  const isOutOfStock = itemStock && !itemStock.isAvailable
+                  const availableStock = itemStock?.availableStock ?? item.countInStock
+                  
+                  return (
+                    <div 
+                      key={item.clientId}
+                      className={cn(
+                        "p-4 md:p-6 transition-all duration-300 relative",
+                        isOutOfStock ? "bg-muted/50" : "hover:bg-muted/30"
+                      )}
+                    >
+                      {/* Out of Stock Overlay */}
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+                          <div className="bg-destructive text-destructive-foreground px-5 py-3 rounded-lg font-medium text-sm shadow-lg flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            Out of Stock
+                            {availableStock > 0 && (
+                              <span className="text-xs opacity-80">
+                                (Only {availableStock} available)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-4 md:gap-6">
+                        {/* Product Image */}
+                        <Link href={`/shop/products/${item.slug}`} className="shrink-0">
+                          <div className={cn(
+                            "relative w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-muted group",
+                            isOutOfStock && "opacity-50"
+                          )}>
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              sizes="(max-width: 640px) 96px, 128px"
+                              className="object-cover group-hover:scale-105 transition-transform duration-500"
+                              unoptimized
+                            />
+                          </div>
+                        </Link>
+
+                        {/* Product Details */}
+                        <div className={cn("flex-1 min-w-0", isOutOfStock && "opacity-50")}>
+                          <div className="flex justify-between items-start gap-3">
+                            <div className="min-w-0 space-y-1">
+                              <Link 
+                                href={`/shop/products/${item.slug}`}
+                                className="font-medium text-foreground hover:text-primary transition-colors line-clamp-2"
+                              >
+                                {item.name}
+                              </Link>
+                              {item.category && (
+                                <p className="text-xs text-muted-foreground">{item.category}</p>
+                              )}
+                            </div>
+                            
+                            {/* Actions */}
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  const productId = item.productIds[0];
+                                  const wasAdded = toggleWishlist({
+                                    _id: productId,
+                                    name: item.name,
+                                    slug: item.slug,
+                                    image: item.image,
+                                    price: item.price,
+                                    category: item.category,
+                                  });
+                                  toast.success(
+                                    wasAdded 
+                                      ? `${item.name} added to wishlist` 
+                                      : `${item.name} removed from wishlist`
+                                  );
+                                }}
+                                className={cn(
+                                  "p-2 rounded-lg transition-all duration-200",
+                                  isInWishlist(item.productIds[0])
+                                    ? "text-rose-500 bg-rose-50 dark:bg-rose-950/20"
+                                    : "text-muted-foreground hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                                )}
+                                title={isInWishlist(item.productIds[0]) ? "Remove from wishlist" : "Add to wishlist"}
+                              >
+                                <Heart className={cn("w-4 h-4", isInWishlist(item.productIds[0]) && "fill-current")} />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveItem(item.clientId, item.name)}
+                                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all duration-200"
+                                title="Remove"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                           
-                          {/* Actions */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              className="p-1.5 text-muted-foreground/60 hover:text-rose-500 hover:bg-rose-50 rounded transition-all duration-200"
-                              title="Save for later"
-                            >
-                              <Heart className="w-4 h-4" />
-                            </button>
+                          {/* Variants */}
+                          {(item.size || item.color) && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {item.size && (
+                                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                                  Size: {item.size}
+                                </span>
+                              )}
+                              {item.color && (
+                                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                                  Color: {item.color}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Stock Warning */}
+                          {!isOutOfStock && availableStock <= 5 && (
+                            <div className="flex items-center gap-1 mt-3 text-xs text-amber-600">
+                              <AlertCircle className="w-3.5 h-3.5" />
+                              <span>Only {availableStock} left in stock</span>
+                            </div>
+                          )}
+
+                          {/* Price & Quantity */}
+                          <div className="flex items-center justify-between mt-4">
+                            <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                              <button
+                                onClick={() => handleUpdateQuantity(item.clientId, item.quantity - 1, item.name)}
+                                disabled={item.quantity <= 1 || isOutOfStock}
+                                className="p-2.5 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="px-4 text-sm font-medium min-w-[3rem] text-center">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => handleUpdateQuantity(item.clientId, item.quantity + 1, item.name)}
+                                disabled={item.quantity >= availableStock || isOutOfStock}
+                                className="p-2.5 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-semibold text-lg text-foreground">
+                                {formatCurrency(item.totalPrice)}
+                              </span>
+                              {item.quantity > 1 && (
+                                <p className="text-xs text-muted-foreground">
+                                  {formatCurrency(item.price)} each
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Remove button - always visible for out of stock items */}
+                        {isOutOfStock && (
+                          <div className="absolute top-4 right-4 z-20">
                             <button
                               onClick={() => handleRemoveItem(item.clientId, item.name)}
-                              className="p-1.5 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 rounded transition-all duration-200"
-                              title="Remove"
+                              className="p-2.5 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors shadow-md"
+                              title="Remove out-of-stock item"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                        </div>
-                        
-                        {/* Variants */}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {item.size && (
-                            <span className="text-[10px] md:text-xs bg-muted/70 text-muted-foreground px-2 py-0.5 rounded">
-                              Size: {item.size}
-                            </span>
-                          )}
-                          {item.color && (
-                            <span className="text-[10px] md:text-xs bg-muted/70 text-muted-foreground px-2 py-0.5 rounded">
-                              Color: {item.color}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Stock Warning */}
-                        {!isOutOfStock && availableStock <= 5 && (
-                          <div className="flex items-center gap-1 mt-2 text-[10px] md:text-xs text-amber-600">
-                            <AlertCircle className="w-3 h-3" />
-                            <span>Only {availableStock} left in stock</span>
-                          </div>
                         )}
-
-                        {/* Quantity & Total */}
-                        <div className="flex items-center justify-between mt-3">
-                          <div className="flex items-center border border-border/60 rounded-md overflow-hidden">
-                            <button
-                              onClick={() => handleUpdateQuantity(item.clientId, item.quantity - 1, item.name)}
-                              disabled={item.quantity <= 1 || isOutOfStock}
-                              className="p-1.5 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="px-3 text-sm font-medium min-w-8 text-center">{item.quantity}</span>
-                            <button
-                              onClick={() => handleUpdateQuantity(item.clientId, item.quantity + 1, item.name)}
-                              disabled={item.quantity >= availableStock || isOutOfStock}
-                              className="p-1.5 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          <span className="font-semibold text-sm md:text-base text-foreground/90">
-                            {formatCurrency(item.totalPrice)}
-                          </span>
-                        </div>
                       </div>
-                      
-                      {/* Remove button - always visible for out of stock items */}
-                      {isOutOfStock && (
-                        <div className="absolute top-4 right-4 z-20">
-                          <button
-                            onClick={() => handleRemoveItem(item.clientId, item.name)}
-                            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md"
-                            title="Remove out-of-stock item"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Delivery Info Banner */}
+            <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/10 rounded-xl text-sm">
+              <Clock className="w-5 h-5 text-primary shrink-0" />
+              <span className="text-foreground">
+                Order now for estimated delivery by <strong>{getEstimatedDelivery()}</strong>
+              </span>
+            </div>
+
+            {/* Continue Shopping Link */}
+            <Link 
+              href="/shop" 
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Continue Shopping
+            </Link>
+          </div>
+
+          {/* Order Summary Sidebar */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="lg:sticky lg:top-24">
+              
+              {/* User Account Card */}
+              {user ? (
+                <div className="bg-primary/5 border border-primary/10 rounded-xl p-5 mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-serif text-lg">
+                      {user.user_metadata?.full_name?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">
+                        {user.user_metadata?.full_name || 'Welcome!'}
+                      </p>
+                      <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                    <Link 
+                      href="/profile" 
+                      className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
+                      title="Go to profile"
+                    >
+                      <User className="w-5 h-5 text-primary" />
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-card border border-border rounded-xl p-5 mb-6 space-y-4">
+                  {/* Guest Email Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      <Mail className="w-4 h-4 inline mr-2" />
+                      Email for Order Updates
+                    </label>
+                    <input
+                      type="email"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="w-full px-4 py-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    />
+                  </div>
+                  
+                  {/* Sign in suggestion */}
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Have an account? Sign in to save addresses & track orders easily.
+                    </p>
+                    <div className="flex gap-3">
+                      <Link 
+                        href="/sign-in?redirect=/cart"
+                        className="flex-1 py-2 px-4 border border-border rounded-lg font-medium text-xs text-center hover:bg-muted transition-colors"
+                      >
+                        Sign In
+                      </Link>
+                      <Link 
+                        href="/sign-up"
+                        className="flex-1 py-2 px-4 bg-primary text-primary-foreground rounded-lg font-medium text-xs text-center hover:bg-primary/90 transition-colors"
+                      >
+                        Sign Up
+                      </Link>
                     </div>
                   </div>
-                  {index < cart.items.length - 1 && <Separator className="bg-border/40" />}
-                </React.Fragment>
-              )
-            })}
-          </div>
-
-          {/* Estimated Delivery Banner */}
-          <div className="flex items-center gap-2.5 p-3 bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/30 rounded-lg text-xs md:text-sm text-emerald-700 dark:text-emerald-400 animate-in fade-in-0 duration-500 delay-300">
-            <Clock className="w-4 h-4 shrink-0" />
-            <span>
-              Order now for estimated delivery by <strong>{getEstimatedDelivery()}</strong>
-            </span>
-          </div>
-
-          {/* Continue Shopping Link */}
-          <Link 
-            href="/shop" 
-            className="inline-flex items-center gap-1.5 text-xs md:text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ChevronRight className="w-4 h-4 rotate-180" />
-            Continue Shopping
-          </Link>
-        </div>
-
-        {/* Order Summary Sidebar */}
-        <div className="lg:col-span-1 space-y-4 animate-in fade-in-0 slide-in-from-right-4 duration-500 delay-200">
-          {/* User Account Card */}
-          {user ? (
-            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-border/50 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold">
-                  {user.user_metadata?.full_name?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">
-                    {user.user_metadata?.full_name || 'Welcome!'}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                </div>
-                <Link 
-                  href="/profile" 
-                  className="p-2 hover:bg-muted rounded-lg transition-colors"
-                  title="Go to profile"
-                >
-                  <User className="w-4 h-4 text-muted-foreground" />
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-card border border-border/50 rounded-lg p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  <User className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Sign in for a better experience</p>
-                  <p className="text-xs text-muted-foreground">Save addresses & track orders</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button asChild size="sm" variant="outline" className="flex-1">
-                  <Link href="/sign-in?redirect=/cart">
-                    <LogIn className="w-4 h-4 mr-1.5" />
-                    Sign In
-                  </Link>
-                </Button>
-                <Button asChild size="sm" className="flex-1">
-                  <Link href="/sign-up">Sign Up</Link>
-                </Button>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Shipping Address */}
-          <div className="bg-card border border-border/50 rounded-lg p-4">
-            <h3 className="text-sm font-medium mb-3 flex items-center gap-2 text-foreground/90">
-              <Package className="w-4 h-4 text-muted-foreground" />
-              Shipping Address
-            </h3>
-            
-            {/* Loading state */}
-            {isLoadingAddresses ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : savedAddresses.length > 0 && !showAddressForm ? (
-              /* Saved addresses selector */
-              <div className="space-y-3">
-                {/* Selected Address Display */}
-                <button
-                  onClick={() => setIsAddressDropdownOpen(!isAddressDropdownOpen)}
-                  className="w-full text-left p-3 border border-border/60 rounded-lg hover:border-primary/40 transition-colors"
-                >
-                  {selectedAddress ? (
-                    <div className="flex items-start gap-3">
-                      {(() => {
-                        const Icon = getAddressTypeIcon(selectedAddress.type);
-                        return (
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <Icon className="w-4 h-4 text-primary" />
-                          </div>
-                        );
-                      })()}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{selectedAddress.label}</span>
-                          {selectedAddress.is_default && (
-                            <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">Default</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                          {selectedAddress.street}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {selectedAddress.city}, {selectedAddress.emirate}
-                        </p>
-                      </div>
-                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isAddressDropdownOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Select an address</span>
-                  )}
-                </button>
-
-                {/* Dropdown */}
-                {isAddressDropdownOpen && (
-                  <div className="border border-border/60 rounded-lg overflow-hidden bg-card shadow-lg">
-                    {savedAddresses.map((addr) => {
-                      const Icon = getAddressTypeIcon(addr.type);
-                      const isSelected = addr.id === selectedAddressId;
-                      return (
-                        <button
-                          key={addr.id}
-                          onClick={() => {
-                            setSelectedAddressId(addr.id);
-                            setIsAddressDropdownOpen(false);
-                          }}
-                          className={`w-full text-left p-3 flex items-start gap-3 hover:bg-muted/50 transition-colors border-b border-border/30 last:border-b-0 ${
-                            isSelected ? 'bg-primary/5' : ''
-                          }`}
-                        >
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                            isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                          }`}>
-                            {isSelected ? <Check className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5 text-muted-foreground" />}
-                          </div>
+              {/* Shipping Address */}
+              <div className="bg-card border border-border rounded-xl p-5 mb-6">
+                <h3 className="font-medium mb-4 flex items-center gap-2 text-foreground">
+                  <Package className="w-5 h-5 text-primary" />
+                  Shipping Address
+                </h3>
+                
+                {/* Loading state */}
+                {isLoadingAddresses ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : savedAddresses.length > 0 && !showAddressForm ? (
+                  /* Saved addresses selector */
+                  <div className="space-y-4">
+                    {/* Selected Address Display */}
+                    <button
+                      onClick={() => setIsAddressDropdownOpen(!isAddressDropdownOpen)}
+                      className="w-full text-left p-4 border border-border rounded-lg hover:border-primary/40 transition-colors"
+                    >
+                      {selectedAddress ? (
+                        <div className="flex items-start gap-3">
+                          {(() => {
+                            const Icon = getAddressTypeIcon(selectedAddress.type);
+                            return (
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <Icon className="w-5 h-5 text-primary" />
+                              </div>
+                            );
+                          })()}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{addr.label}</span>
-                              {addr.is_default && (
-                                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">Default</span>
+                              <span className="font-medium">{selectedAddress.label}</span>
+                              {selectedAddress.is_default && (
+                                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Default</span>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                              {addr.street}, {addr.city}
+                            <p className="text-sm text-muted-foreground mt-1 truncate">
+                              {selectedAddress.street}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {selectedAddress.city}, {selectedAddress.emirate}
                             </p>
                           </div>
-                        </button>
-                      );
-                    })}
+                          <ChevronDown className={cn(
+                            "w-5 h-5 text-muted-foreground transition-transform",
+                            isAddressDropdownOpen && "rotate-180"
+                          )} />
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Select an address</span>
+                      )}
+                    </button>
+
+                    {/* Dropdown */}
+                    {isAddressDropdownOpen && (
+                      <div className="border border-border rounded-lg overflow-hidden bg-card shadow-lg animate-fade-in">
+                        {savedAddresses.map((addr) => {
+                          const Icon = getAddressTypeIcon(addr.type);
+                          const isSelected = addr.id === selectedAddressId;
+                          return (
+                            <button
+                              key={addr.id}
+                              onClick={() => {
+                                setSelectedAddressId(addr.id);
+                                setIsAddressDropdownOpen(false);
+                              }}
+                              className={cn(
+                                "w-full text-left p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors border-b border-border last:border-b-0",
+                                isSelected && "bg-primary/5"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                                isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
+                              )}>
+                                {isSelected ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4 text-muted-foreground" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">{addr.label}</span>
+                                  {addr.is_default && (
+                                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Default</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                                  {addr.street}, {addr.city}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Add new address link */}
+                    <button
+                      onClick={() => setShowAddressForm(true)}
+                      className="w-full text-sm text-primary hover:text-primary/80 flex items-center justify-center gap-1.5 py-2 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Use a different address
+                    </button>
+                  </div>
+                ) : (
+                  /* Address form for new address or no saved addresses */
+                  <div>
+                    {savedAddresses.length > 0 && (
+                      <button
+                        onClick={() => setShowAddressForm(false)}
+                        className="text-sm text-muted-foreground hover:text-primary mb-4 flex items-center gap-1.5 transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to saved addresses
+                      </button>
+                    )}
+                    <ShippingAddressForm onSave={handleAddressSave} />
                   </div>
                 )}
-
-                {/* Add new address link */}
-                <button
-                  onClick={() => setShowAddressForm(true)}
-                  className="w-full text-xs text-primary hover:underline flex items-center justify-center gap-1 py-2"
-                >
-                  <Plus className="w-3 h-3" />
-                  Use a different address
-                </button>
               </div>
-            ) : (
-              /* Address form for new address or no saved addresses */
-              <div>
-                {savedAddresses.length > 0 && (
-                  <button
-                    onClick={() => setShowAddressForm(false)}
-                    className="text-xs text-muted-foreground hover:text-primary mb-3 flex items-center gap-1"
-                  >
-                    <ChevronRight className="w-3 h-3 rotate-180" />
-                    Back to saved addresses
-                  </button>
-                )}
-                <ShippingAddressForm onSave={handleAddressSave} />
-              </div>
-            )}
-          </div>
 
-          {/* Order Summary */}
-          <div className="bg-card border border-border/50 rounded-lg p-4">
-            <h3 className="text-sm font-medium mb-4 text-foreground/90">Order Summary</h3>
-            
-            <div className="space-y-2.5 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(cart.items.reduce((acc, item) => acc + item.totalPrice, 0))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Shipping</span>
-                <span className={cart.shippingPrice === 0 ? "text-emerald-600" : ""}>
-                  {cart.shippingPrice === 0 ? "Free" : formatCurrency(cart.shippingPrice || 0)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tax</span>
-                <span>{formatCurrency(cart.taxPrice || 0)}</span>
-              </div>
-            </div>
-
-            <Separator className="my-3 bg-border/40" />
-
-            <div className="flex justify-between items-center font-semibold">
-              <span>Total</span>
-              <span className="text-lg text-primary">{formatCurrency(cart.totalPrice || 0)}</span>
-            </div>
-
-            {/* Promo Code */}
-            <div className="mt-4 pt-3 border-t border-border/40">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <Input 
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    placeholder="Promo code" 
-                    className="pl-8 h-8 text-sm"
-                  />
+              {/* Order Summary */}
+              <div className="bg-card border border-border rounded-xl p-5 mb-6">
+                <h3 className="font-medium mb-4 text-foreground">Order Summary</h3>
+                
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal ({cart.items.length} items)</span>
+                    <span className="font-medium">{formatCurrency(cart.items.reduce((acc, item) => acc + item.totalPrice, 0))}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Shipping</span>
+                    <span className={cn("font-medium", cart.shippingPrice === 0 && "text-primary")}>
+                      {cart.shippingPrice === 0 ? "Free" : formatCurrency(cart.shippingPrice || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tax</span>
+                    <span className="font-medium">{formatCurrency(cart.taxPrice || 0)}</span>
+                  </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-8 text-xs"
-                  onClick={handleApplyPromo}
-                  disabled={isApplyingPromo}
-                >
-                  {isApplyingPromo ? '...' : 'Apply'}
-                </Button>
+
+                {/* Promo Code */}
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input 
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        placeholder="Promo code" 
+                        className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      />
+                    </div>
+                    <button 
+                      onClick={handleApplyPromo}
+                      disabled={isApplyingPromo || !promoCode.trim()}
+                      className="px-4 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isApplyingPromo ? '...' : 'Apply'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-lg">Total</span>
+                    <span className="font-semibold text-2xl text-primary">{formatCurrency(cart.totalPrice || 0)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="bg-card border border-border rounded-xl p-5 mb-6">
+                <h3 className="font-medium mb-4 text-foreground">Payment Method</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPaymentMethod('Card')}
+                    disabled
+                    className="flex flex-col items-center justify-center p-4 border border-border rounded-lg opacity-50 cursor-not-allowed bg-muted/30"
+                  >
+                    <span className="text-xs text-muted-foreground">Card Payment</span>
+                    <span className="text-[10px] text-muted-foreground/70 mt-1">Coming Soon</span>
+                  </button>
+
+                  <button
+                    onClick={() => setPaymentMethod('CashOnDelivery')}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-4 border rounded-lg transition-all duration-200",
+                      cart.paymentMethod === 'CashOnDelivery'
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "border-border hover:border-primary/40 hover:bg-muted/30"
+                    )}
+                  >
+                    <Banknote className={cn(
+                      "w-6 h-6 mb-2",
+                      cart.paymentMethod === 'CashOnDelivery' ? "text-primary" : "text-muted-foreground"
+                    )} />
+                    <span className={cn(
+                      "text-xs font-medium",
+                      cart.paymentMethod === 'CashOnDelivery' ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      Cash on Delivery
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Checkout Button */}
+              <button 
+                onClick={handleCheckout}
+                disabled={
+                  isCheckingOut || 
+                  cart.items.length === 0 || 
+                  cart.paymentMethod !== 'CashOnDelivery' ||
+                  hasOutOfStockItems ||
+                  isValidatingStock
+                }
+                className={cn(
+                  "w-full py-4 rounded-xl font-medium text-lg transition-all duration-300 flex items-center justify-center gap-2",
+                  "bg-primary text-primary-foreground hover:bg-primary/90",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "btn-hover-lift"
+                )}
+              >
+                {isCheckingOut ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : hasOutOfStockItems ? (
+                  <>
+                    <AlertCircle className="w-5 h-5" />
+                    Remove Out-of-Stock Items
+                  </>
+                ) : isValidatingStock ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Checking Stock...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    Place Order
+                  </>
+                )}
+              </button>
+
+              {/* Trust Badges */}
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Shield className="w-4 h-4 text-primary shrink-0" />
+                  <span>Secure SSL encrypted checkout</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Truck className="w-4 h-4 text-primary shrink-0" />
+                  <span>Free shipping on orders over AED 100</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <RotateCcw className="w-4 h-4 text-primary shrink-0" />
+                  <span>30-day hassle-free returns</span>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Payment Method */}
-          <div className="bg-card border border-border/50 rounded-lg p-4">
-            <h3 className="text-sm font-medium mb-3 text-foreground/90">Payment Method</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setPaymentMethod('Card')}
-                disabled
-                className="flex flex-col items-center justify-center p-3 border border-border/50 rounded-lg opacity-50 cursor-not-allowed bg-muted/30"
-              >
-                <span className="text-[10px] text-muted-foreground">Card</span>
-                <span className="text-[9px] text-muted-foreground/70 mt-0.5">Coming Soon</span>
-              </button>
-
-              <button
-                onClick={() => setPaymentMethod('CashOnDelivery')}
-                className={`flex flex-col items-center justify-center p-3 border rounded-lg transition-all duration-200 ${
-                  cart.paymentMethod === 'CashOnDelivery'
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                    : 'border-border/50 hover:border-primary/40 hover:bg-muted/30'
-                }`}
-              >
-                <Banknote className={`w-5 h-5 mb-1 ${cart.paymentMethod === 'CashOnDelivery' ? 'text-primary' : 'text-muted-foreground'}`} />
-                <span className={`text-[10px] ${cart.paymentMethod === 'CashOnDelivery' ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                  Cash on Delivery
-                </span>
-              </button>
-            </div>
+      {/* Mobile Sticky Checkout Bar */}
+      <div className="sticky-bottom-mobile">
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">Total</span>
+            <span className="font-semibold text-xl">{formatCurrency(cart.totalPrice || 0)}</span>
           </div>
-
-          {/* Checkout Button */}
-          <Button 
-            className="w-full h-11 font-medium transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+          <button 
             onClick={handleCheckout}
             disabled={
               isCheckingOut || 
@@ -861,52 +1036,21 @@ const CartPage = () => {
               hasOutOfStockItems ||
               isValidatingStock
             }
+            className={cn(
+              "flex-1 py-3.5 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2",
+              "bg-primary text-primary-foreground hover:bg-primary/90",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
           >
             {isCheckingOut ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : hasOutOfStockItems ? (
-              <>
-                <AlertCircle className="w-4 h-4 mr-2" />
-                Remove Out-of-Stock Items
-              </>
-            ) : isValidatingStock ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Checking Stock...
-              </>
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              'Place Order (Cash on Delivery)'
+              <>
+                <Lock className="w-4 h-4" />
+                Place Order
+              </>
             )}
-          </Button>
-
-          {/* Trust Badges */}
-          {/* <div className="bg-muted/30 border border-border/30 rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <Shield className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Secure SSL encrypted checkout</span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <Truck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>Free shipping on orders over $50</span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span>30-day hassle-free returns</span>
-            </div>
-          </div> */}
-
-          {/* Payment Methods Badge */}
-          {/* <div className="flex items-center justify-center gap-2 py-2">
-            <span className="text-[10px] text-muted-foreground/70">We accept:</span>
-            <div className="flex gap-1.5">
-              <div className="px-2 py-0.5 bg-[#1a1f71] rounded text-white text-[8px] font-bold">VISA</div>
-              <div className="px-2 py-0.5 bg-[#eb001b] rounded text-white text-[8px] font-bold">MC</div>
-              <div className="px-2 py-0.5 bg-[#006fcf] rounded text-white text-[8px] font-bold">AMEX</div>
-            </div>
-          </div> */}
+          </button>
         </div>
       </div>
     </div>

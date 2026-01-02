@@ -19,15 +19,13 @@ export default function BrowsingHistoryList(
     if (products.length === 0) return null;
 
     return (
-        <div className="">
-            <Separator className={cn('mb-4', className)} />
+        <div className={cn("space-y-12", className)}>
             <ProductList
-                title="Related to items you've viewed"
+                title="You May Also Like"
                 type='related'
              />
-            <Separator className='mb-4' />
             <ProductList
-                title="Browsing History"
+                title="Recently Viewed"
                 hideDetails
                 type='history'
              />

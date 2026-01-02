@@ -1,26 +1,15 @@
+'use client'
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
-import { Star, ShoppingCart } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Star, Heart } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { IProduct } from "@/lib/db/models/product.model";
 import AddToCartButton from "./addToCart";
-import { Button } from "@/components/ui/button";
+import useWishlistStore from "@/lib/hooks/useWishlistStore";
+import { toast } from "react-toastify";
 
-// --- Original Unrelated Code ---
-type CardItem = {
-    title: string
-    link: { text: string, href: string }
-    items: {
-        name: string
-        items?: string[]
-        imageUrl: string
-        href: string
-    }[]
-}
-
-// --- New Rustic Product Card System ---
+// --- Premium Product Card System ---
 
 export interface ProductCardProps {
     product: IProduct
@@ -29,21 +18,9 @@ export interface ProductCardProps {
     showBottom?: boolean
 }
 
-
-interface CardBottomProps {
-    price: number;
-    listPrice?: number;
-    isDeal?: boolean;
-    className?: string;
-    forListing?: boolean;
-    plain?: boolean;
-    product?: IProduct;
-}
-
 /**
- * ProductCard (Main Component)
- * Orchestrates the subcomponents.
- * Rustic Style: No rounded corners, no borders, soft shadows.
+ * ProductCard - Premium Design
+ * Clean, minimal with elegant hover effects
  */
 export function ProductCard({
     product,
@@ -51,234 +28,221 @@ export function ProductCard({
     isDeal = false,
     showBottom = true
 }: ProductCardProps) {
+    const { toggleItem, isInWishlist } = useWishlistStore();
+    const [mounted, setMounted] = useState(false);
+    
+    // Prevent hydration mismatch by only reading wishlist state after mount
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+    
+    const isWishlisted = mounted && isInWishlist(product._id.toString());
 
-    /**
-     * 1. ProductImage
-     * Rustic styling, no textures, soft hover scale.
-     */
-    const ProductImage = ({ src, alt }: { src: string; alt: string }) => {
-        return (
-            <div className="group relative w-full overflow-hidden bg-stone-200 aspect-4/5">
-                <Link href={`/shop/products/${product.slug}`}>
+    const handleWishlistClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const added = toggleItem({
+            _id: product._id.toString(),
+            name: product.name,
+            slug: product.slug,
+            image: product.images[0] || '',
+            price: product.price,
+            category: product.category,
+        });
+        if (added) {
+            toast.success('Added to wishlist');
+        } else {
+            toast.info('Removed from wishlist');
+        }
+    };
+
+    const discountPercent = isDeal && product.listPrice && product.listPrice > product.price
+        ? Math.round(100 - (product.price / product.listPrice) * 100)
+        : 0;
+
+    return (
+        <div className={cn(
+            "group flex flex-col bg-card rounded-xl overflow-hidden transition-all duration-300",
+            "hover:shadow-xl hover:-translate-y-1",
+            className
+        )}>
+            {/* Image Container */}
+            <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+                <Link href={`/shop/products/${product.slug}`} className="block h-full">
                     <Image
-                        src={src}
-                        alt={alt}
+                        src={product.images[0]}
+                        alt={product.name}
                         fill
-                        className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-107"
+                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                         loading="lazy"
-                        placeholder="blur"
-                        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAYH/8QAIhAAAgEDAwUBAAAAAAAAAAAAAQIDBAURABIhBgcTMUFR/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAZEQACAwEAAAAAAAAAAAAAAAABAgADESH/2gAMAwEAAhEDEEA/ANJ6f7nW+C0UUU1lpZJI4UVnNQ6liFAJI8Y+nJ59Y1q0hYkkkn6edKVJBqbkZ+if/9k="
                         unoptimized
                     />
                 </Link>
-                {/* Subtle warm overlay for rustic tone blending */}
-                <div className="pointer-events-none absolute inset-0 bg-stone-900/5 mix-blend-multiply" />
-            </div>
-        );
-    };
-
-    /**
-     * 2. Rating
-     * Renders stars in rustic warm neutral colors.
-     */
-    const Rating = ({ rating, size }: { rating: number, size: number }) => {
-        const fullStars = Math.floor(rating)
-        const partialStar = rating % 1
-        const emptyStars = 5 - Math.ceil(rating)
-
-        return (
-            <div className="flex items-center gap-0.5" aria-label={`Rating: ${rating} out of 5`}>
-                {[...Array(fullStars)].map((_, i) => (
-                    <Star
-                    key={`full-${i}`}
-                    className={`w-3.5 h-3.5 fill-[#FFC67D]`}/>
-                ))}
-                {partialStar > 0 &&
-                <div className="relative">
-                    <Star className={`w-3.5 h-3.5`}/>
-                    <div 
-                        className="absolute top-0 left-0 overflow-hidden"
-                        style={{width: `${partialStar*100}%`}}>
-                            <Star className={`w-3.5 h-3.5 fill-[#FFC67D]`}/>
-                    </div>
-                </div>
-                }
-                {[...Array(emptyStars)].map((_,i) => (
-                    <Star
-                    key={`empty-${i}`}
-                    className={`w-3.5 h-3.5`}
-                    />
-                ))
-
-                }
-            </div>
-        );
-    };
-
-    /**
-     * 3. CardBottom
-     * Handles pricing, deal logic, and add-to-cart action.
-     */
-    const CardBottom = ({ price, listPrice, isDeal, className, forListing, plain, product: cardProduct }: CardBottomProps) => {
-        // Calculate discount percentage if it's a deal and listPrice exists
-        const discountPercent =
-            isDeal && listPrice && listPrice > price
-                ? Math.round(100 - (price / listPrice) * 100)
-                : 0;
-        const stringValue = price.toString()
-        const [intValue, decimalValue] = stringValue.includes('.') ? stringValue.split('.') : [stringValue, '']
-
-        return (
-            <div className="mt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-3 px-1 gap-2 sm:gap-1">
-                {/* Left: Price & Deal Info */}
-                {plain ? formatCurrency(price):
-                (<div className="flex flex-col gap-1">
-                    {isDeal ? (
-                        <>
-                            <div className="flex items-center gap-2">
-                                <span className="bg-red-900/90 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-white shadow-sm">
-                                    DEAL
-                                </span>
-                                <span className="text-xs font-medium text-red-800">
-                                    {discountPercent}% off
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <span className="text-lg font-bold text-stone-800">
-                                    {formatCurrency(price)}
-                                </span>
-                                {listPrice && (
-                                    <span className="text-xs text-stone-400 line-through decoration-stone-400">
-                                        {formatCurrency(listPrice)}
-                                    </span>
-                                )}
-                            </div>
-                        </>
-                    ) : (
-                        <span className="text-lg font-bold text-stone-800">
-                            {formatCurrency(price)}
+                
+                {/* Badges */}
+                <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+                    {isDeal && discountPercent > 0 && (
+                        <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase bg-destructive text-white rounded">
+                            -{discountPercent}%
                         </span>
                     )}
-                </div>)}
+                    {product.tags?.includes('new') && (
+                        <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase bg-primary text-primary-foreground rounded">
+                            New
+                        </span>
+                    )}
+                    {product.tags?.includes('best-seller') && (
+                        <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase bg-accent text-foreground rounded">
+                            Bestseller
+                        </span>
+                    )}
+                </div>
 
-                {/* Right: Add to Cart Button */}
-                <AddToCartButton
-                    className="text-xs sm:text-[10px] md:text-xs font-inter rounded-2xl py-1.5 px-3 sm:py-1 sm:px-2 md:py-2 md:px-3 w-full sm:w-auto text-center"
-                    price={price}
-                    quantity={1}
-                    text="Add to cart"
-                    successText="Added!"
-                    cartColor="text-white"
-                    itemColor="bg-yellow-400"
-                    buttonColor="bg-primary hover:bg-gray-800"
-                    textColor="text-white"
-                    showPrice={false} // <-- hide total price to avoid cut-off in carousels/listings
-                    product={cardProduct ? {
-                        _id: cardProduct._id.toString(),
-                        name: cardProduct.name,
-                        slug: cardProduct.slug,
-                        category: cardProduct.category,
-                        images: cardProduct.images,
-                        price: cardProduct.price,
-                        countInStock: cardProduct.countInStock || 0
-                    } : undefined}
-                />
+                {/* Wishlist Button */}
+                <button 
+                    onClick={handleWishlistClick}
+                    className={cn(
+                        "absolute top-3 right-3 z-10 p-2.5 backdrop-blur-sm rounded-full transition-all duration-300 hover:scale-110 shadow-sm",
+                        isWishlisted 
+                            ? "bg-rose-50 text-rose-500 opacity-100" 
+                            : "bg-white/90 text-foreground opacity-0 group-hover:opacity-100 hover:bg-white"
+                    )}
+                    aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                >
+                    <Heart className={cn("w-4 h-4", isWishlisted && "fill-current")} />
+                </button>
+
+                {/* Quick Add - Shows on hover */}
+                <div className="absolute inset-x-4 bottom-4 opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-300 z-10">
+                    <AddToCartButton
+                        className="w-full text-xs font-medium py-3 px-4 rounded-lg shadow-lg backdrop-blur-sm"
+                        price={product.price}
+                        quantity={1}
+                        text="Quick Add"
+                        successText="Added!"
+                        cartColor="text-white"
+                        itemColor="bg-accent"
+                        buttonColor="bg-primary/95 hover:bg-primary"
+                        textColor="text-primary-foreground"
+                        showPrice={false}
+                        product={{
+                            _id: product._id.toString(),
+                            name: product.name,
+                            slug: product.slug,
+                            category: product.category,
+                            images: product.images,
+                            price: product.price,
+                            countInStock: product.countInStock || 0
+                        }}
+                    />
+                </div>
+                
+                {/* Subtle overlay on hover */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
             </div>
-        );
-    };
 
-    return (
-        <div
-            className={cn(
-                "font-inter group flex flex-col shadow-xs transition-shadow duration-300 hover:shadow-sm",
-                "max-w-xs overflow-hidden", // Layout constraints
-                className
-            )}
-        >
-            {/* 1. Image */}
-            <ProductImage src={product.images[0]} alt={product.name} />
+            {/* Content */}
+            <div className="flex flex-col p-4 gap-2 flex-1">
+                {/* Category */}
+                <span className="text-[11px] text-muted-foreground tracking-wider uppercase font-medium">
+                    {product.category}
+                </span>
 
-            {/* Content Container - Vertical Stack Layout */}
-            <div className="flex flex-1 flex-col p-4 space-y-2.5">
-                {/* 1. Title */}
-                <Link href={`/shop/products/${product.slug}`}>
-                    <h3 className="line-clamp-2 text-base font-medium leading-tight text-stone-900 hover:text-secondary hover:underline">
-                        {product.name.length > 24 ? product.name.slice(0, 24) + "..." : product.name}
+                {/* Title */}
+                <Link href={`/shop/products/${product.slug}`} className="flex-1">
+                    <h3 className="font-medium text-foreground leading-snug line-clamp-2 hover:text-primary transition-colors duration-200 text-sm md:text-base">
+                        {product.name}
                     </h3>
                 </Link>
 
-                {/* 2. Dimensions */}
-                {product.dimensions && showBottom && (
-                    <p className="text-xs text-muted-foreground/90 leading-relaxed">
-                        Size: {product.dimensions.width}cm × {product.dimensions.height}cm × {product.dimensions.depth}cm
-                    </p>
+                {/* Rating */}
+                {showBottom && product.avgRating !== undefined && product.avgRating > 0 && (
+                    <div className="flex items-center gap-1.5">
+                        <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                                <Star
+                                    key={i}
+                                    className={cn(
+                                        "w-3.5 h-3.5",
+                                        i < Math.floor(product.avgRating || 0)
+                                            ? "fill-amber-400 text-amber-400"
+                                            : "text-border fill-transparent"
+                                    )}
+                                />
+                            ))}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                            ({product.numReviews || 0})
+                        </span>
+                    </div>
                 )}
 
-                {/* 3. Price & Rating Row */}
-                <div className="flex items-center justify-between gap-2 pt-1">
-                    {/* Price */}
-                    <div className="flex flex-col gap-1">
-                        {isDeal && product.listPrice && product.listPrice > product.price ? (
-                            <>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="bg-red-900/90 px-1.5 py-0.5 text-[9px] font-medium tracking-wide text-white shadow-sm rounded-sm">
-                                        DEAL
-                                    </span>
-                                    <span className="text-[10px] font-medium text-red-800">
-                                        {Math.round(100 - (product.price / product.listPrice) * 100)}% off
-                                    </span>
-                                </div>
-                                <div className="flex items-baseline gap-1.5">
-                                    <span className="text-md font-bold text-stone-800">
-                                        {formatCurrency(product.price)}
-                                    </span>
-                                    <span className="text-xs text-stone-400 line-through">
-                                        {formatCurrency(product.listPrice)}
-                                    </span>
-                                </div>
-                            </>
-                        ) : (
-                            <span className="text-md font-bold text-stone-800">
-                                {formatCurrency(product.price)}
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Rating */}
-                    {showBottom && (
-                        <div className="flex flex-col items-end gap-0.5">
-                            <Rating rating={product.avgRating || 0} size={2} />
-                            <span className="text-[10px] text-muted-foreground/70">
-                                ({product.numReviews})
-                            </span>
-                        </div>
+                {/* Price */}
+                <div className="flex items-baseline gap-2 mt-auto pt-2">
+                    <span className="font-semibold text-foreground text-base md:text-lg">
+                        {formatCurrency(product.price)}
+                    </span>
+                    {isDeal && product.listPrice && product.listPrice > product.price && (
+                        <span className="text-sm text-muted-foreground line-through">
+                            {formatCurrency(product.listPrice)}
+                        </span>
                     )}
                 </div>
-
-                {/* 4. Add to Cart Button */}
-                <AddToCartButton
-                    className="w-full text-xs font-inter rounded-lg py-2.5 px-4 transition-all duration-200"
-                    price={product.price}
-                    quantity={1}
-                    text="Add to cart"
-                    successText="Added!"
-                    cartColor="text-white"
-                    itemColor="bg-yellow-400"
-                    buttonColor="bg-primary hover:bg-gray-800"
-                    textColor="text-white"
-                    showPrice={false}
-                    product={{
-                        _id: product._id.toString(),
-                        name: product.name,
-                        slug: product.slug,
-                        category: product.category,
-                        images: product.images,
-                        price: product.price,
-                        countInStock: product.countInStock || 0
-                    }}
-                />
             </div>
         </div>
     );
+}
+
+// Horizontal card variant for cart/listing
+export function ProductCardHorizontal({
+    product,
+    className,
+}: {
+    product: IProduct
+    className?: string
+}) {
+    return (
+        <div className={cn(
+            "flex gap-4 p-4 bg-card rounded-lg border border-border",
+            className
+        )}>
+            {/* Image */}
+            <Link href={`/shop/products/${product.slug}`} className="flex-shrink-0">
+                <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-muted">
+                    <Image
+                        src={product.images[0]}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="100px"
+                        unoptimized
+                    />
+                </div>
+            </Link>
+            
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                <Link href={`/shop/products/${product.slug}`}>
+                    <h4 className="font-medium text-foreground line-clamp-1 hover:text-primary transition-colors">
+                        {product.name}
+                    </h4>
+                </Link>
+                <p className="text-sm text-muted-foreground mt-0.5">{product.category}</p>
+                <p className="font-semibold text-foreground mt-2">{formatCurrency(product.price)}</p>
+            </div>
+        </div>
+    );
+}
+
+// Keep backward compatibility exports
+export type CardItem = {
+    title: string
+    link: { text: string, href: string }
+    items: {
+        name: string
+        items?: string[]
+        imageUrl: string
+        href: string
+    }[]
 }

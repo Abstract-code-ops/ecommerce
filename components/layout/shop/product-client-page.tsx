@@ -15,91 +15,42 @@ interface ProductClientPageProps {
 }
 
 export default function ProductClientPage({ product, relatedProducts }: ProductClientPageProps) {
-    const lenisRef = useRef<Lenis | null>(null);
-    const rafRef = useRef<number | null>(null);
 
-    useEffect(() => {
-        // Skip smooth scroll if user prefers reduced motion
-        if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-            return;
-        }
-
-        const lenisInstance = new Lenis({
-            duration: 1.2,
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            orientation: 'vertical',
-            gestureOrientation: 'vertical',
-            smoothWheel: true,
-            wheelMultiplier: 1,
-            touchMultiplier: 2,
-        });
-
-        lenisRef.current = lenisInstance;
-
-        function loop(time: number) {
-            try {
-                if (lenisRef.current && typeof (lenisRef.current as any).raf === 'function') {
-                    lenisRef.current.raf(time);
-                }
-            } catch (err) {
-                // swallow errors
-            }
-            rafRef.current = requestAnimationFrame(loop);
-        }
-
-        // Pause on visibility change to save CPU
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                lenisRef.current?.stop();
-            } else {
-                lenisRef.current?.start();
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        rafRef.current = requestAnimationFrame(loop);
-
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            if (rafRef.current !== null) {
-                cancelAnimationFrame(rafRef.current);
-                rafRef.current = null;
-            }
-            try {
-                lenisInstance.destroy();
-            } catch (e) {
-                // ignore destroy errors
-            }
-            lenisRef.current = null;
-        };
-    }, []);
 
     return (
-        <div className="">
+        <div className="bg-background">
             <AddToBrowsingHistory id={product._id.toString()} category={product.category} />
             <section className="grid grid-cols-1 lg:grid-cols-12 min-h-screen">
                 {/* LEFT: Gallery */}
-                <div className="lg:col-span-7 xl:col-span-8 relative">
+                <div className="lg:col-span-7 xl:col-span-8 relative bg-muted/30">
                     <ProductGallery images={product.images}/>
                 </div>
 
                 {/* RIGHT: Details */}
-                <div className="lg:col-span-5 xl:col-span-4 pr-6 py-8 lg:pr-12 lg:py-16 relative">
-                    <div className="lg:sticky lg:top-24">
+                <div className="lg:col-span-5 xl:col-span-4 px-6 py-8 lg:px-10 lg:py-16 relative bg-background">
+                    <div className="lg:sticky lg:top-24 max-w-lg mx-auto lg:mx-0">
                         <ProductDetailsInfo product={product} />
                     </div>
                 </div>
             </section>
-            <section className="mt-20">
-                <ProductSlider
-                    title="Related Products"
-                    products={relatedProducts}
-                    showBottom={true}
-                />
+            
+            {/* Related Products Section */}
+            <section className="py-16 md:py-24 bg-card border-t border-border">
+                <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+                    <ProductSlider
+                        title="You May Also Like"
+                        products={relatedProducts}
+                        showBottom={true}
+                    />
+                </div>
             </section>
-            <div className="">
-                <BrowsingHistoryList className="mt-10" />
-            </div>
+            
+            {/* Browsing History */}
+            <section className="py-16 md:py-24 bg-background">
+                <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+                    <BrowsingHistoryList className="" />
+                </div>
+            </section>
         </div>
     );
 }

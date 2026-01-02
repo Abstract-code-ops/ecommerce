@@ -1,20 +1,22 @@
 "use client";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { App_NAME } from "@/lib/constants";
 import Link from "next/link";
 import Menu from "./menu";
 import Search from "./search";
 import data from "@/lib/data";
-import { MenuIcon, X } from "lucide-react";
+import { MenuIcon, X, Search as SearchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchExpanded, setSearchExpanded] = useState(false);
 
-  // New: ref to the original header and sticky state
+  // Ref to the original header and sticky state
   const headerRef = useRef<HTMLElement | null>(null);
   const [showSticky, setShowSticky] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -45,6 +47,7 @@ export default function Header() {
           if (!el) return;
           const rect = el.getBoundingClientRect();
           setShowSticky(rect.bottom <= 0);
+          setIsScrolled(window.scrollY > 20);
           ticking = false;
         });
         ticking = true;
@@ -58,215 +61,274 @@ export default function Header() {
     };
   }, []);
 
+  // Announcement bar text
+  const announcementText = "Free shipping on orders over $100 • Crafted with love";
+
   return (
     <>
-      {/* Sticky header that fades/slides in when the original header is out of view */}
+      {/* Sticky header */}
       <div
         aria-hidden={!showSticky}
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 bg-black text-white shadow-md transition-[opacity,transform] duration-300 ease-in-out",
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
           showSticky
             ? "pointer-events-auto opacity-100 translate-y-0"
-            : "pointer-events-none opacity-0 -translate-y-4"
+            : "pointer-events-none opacity-0 -translate-y-full"
         )}
       >
-        <div className="px-2">
-          <div className="relative z-50 flex items-center justify-between py-3 px-5">
-            <Link
-              href="/shop"
-              className="flex items-center gap-3 header-button font-extrabold text-xl m-1"
-            >
-              <Image
-                src="/images/logo-small.png"
-                alt={App_NAME}
-                width={50}
-                height={40}
-                className="object-contain"
-              />
-              <span>{App_NAME}</span>
-            </Link>
-
-            <div className="hidden md:block flex-1 max-w-xl">
-              <Search className="w-full" />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="hidden md:block">
-                <Menu />
-              </div>
-              <button
-                type="button"
-                aria-expanded={mobileOpen}
-                aria-label="Toggle navigation"
-                onClick={() => setMobileOpen((prev) => !prev)}
-                className="md:hidden rounded-full p-2 hover:bg-white/10 transition"
+        {/* Sticky Header Content */}
+        <div className="bg-white/95 backdrop-blur-md border-b border-border/50 shadow-sm">
+          <div className="container-premium">
+            <div className="flex items-center justify-between h-16">
+              {/* Logo */}
+              <Link
+                href="/shop"
+                className="flex items-center gap-2 group"
               >
-                {mobileOpen ? <X size={20} /> : <MenuIcon size={20} />}
-              </button>
-            </div>
-          </div>
+                <Image
+                  src="/images/logo-small.png"
+                  alt={App_NAME}
+                  width={36}
+                  height={36}
+                  className="object-contain transition-transform duration-300 group-hover:scale-105"
+                />
+                <span className="font-serif text-lg text-foreground tracking-tight">{App_NAME}</span>
+              </Link>
 
-          {/* ADDED: show the headerMenus in the sticky header (md+ only) */}
-          <div className="hidden md:flex justify-center items-center px-3 mb-px bg-secondary">
-            <div className="flex items-center flex-wrap gap-3 overflow-hidden max-h-[42px]">
-              {data.headerMenus.map((menu) => (
-                <Link
-                  key={menu.href}
-                  href={menu.href}
-                  className="header-button animate-underline px-2 py-1"
-                >
-                  {menu.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Original header (kept in flow) */}
-      <header ref={headerRef} className="bg-black text-white">
-        <div className="px-2">
-          <div className="relative z-50 flex items-center justify-between py-3 px-5">
-            <Link
-              href="/shop"
-              className="flex items-center gap-3 header-button font-extrabold text-xl m-1"
-            >
-              <Image
-                src="/images/logo-small.png"
-                alt={App_NAME}
-                width={50}
-                height={40}
-                className="object-contain"
-              />
-              <span>{App_NAME}</span>
-            </Link>
-
-            <div className="hidden md:block flex-1 max-w-xl">
-              <Search className="w-full" />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="hidden md:block">
-                <Menu />
-              </div>
-              <button
-                type="button"
-                aria-expanded={mobileOpen}
-                aria-label="Toggle navigation"
-                onClick={() => setMobileOpen((prev) => !prev)}
-                className="md:hidden rounded-full p-2 hover:bg-white/10 transition"
-              >
-                {mobileOpen ? <X size={20} /> : <MenuIcon size={20} />}
-              </button>
-            </div>
-          </div>
-
-          <div
-            aria-hidden={!mobileOpen}
-            className={cn(
-              "md:hidden fixed inset-0 h-screen bg-black/95 backdrop-blur-sm z-40 transition-[opacity,transform] duration-300 ease-in-out",
-              mobileOpen
-                ? "pointer-events-auto opacity-100 translate-y-0"
-                : "pointer-events-none opacity-0 -translate-y-4"
-            )}
-          >
-            <div className="flex h-full flex-col gap-4 overflow-y-auto px-5 pb-8 pt-24">
-              <Search className="w-full" onSubmit={() => setMobileOpen(false)} />
-              <nav className="space-y-2">
+              {/* Center Nav - Desktop */}
+              <nav className="hidden lg:flex items-center gap-8">
                 {data.headerMenus.map((menu) => (
                   <Link
                     key={menu.href}
                     href={menu.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="block rounded-md px-3 py-2 text-sm font-medium transition hover:bg-white/20"
+                    className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors duration-200 animate-underline py-1"
                   >
                     {menu.name}
                   </Link>
                 ))}
               </nav>
-              <Menu layout="mobile" onNavigate={() => setMobileOpen(false)} />
+
+              {/* Right Actions */}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setSearchExpanded(!searchExpanded)}
+                  className="hidden md:flex p-2 hover:bg-muted rounded-full transition-colors duration-200"
+                  aria-label="Toggle search"
+                >
+                  <SearchIcon className="w-5 h-5 text-foreground/70" />
+                </button>
+                <div className="hidden md:block">
+                  <Menu />
+                </div>
+                <button
+                  type="button"
+                  aria-expanded={mobileOpen}
+                  aria-label="Toggle navigation"
+                  onClick={() => setMobileOpen((prev) => !prev)}
+                  className="md:hidden p-2 hover:bg-muted rounded-full transition-colors duration-200"
+                >
+                  {mobileOpen ? <X className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Expandable Search Bar */}
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-300 ease-out",
+              searchExpanded ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="container-premium pb-4">
+              <Search className="w-full max-w-2xl mx-auto" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Original header */}
+      <header ref={headerRef} className="relative">
+        {/* Announcement Bar */}
+        <div className="bg-primary text-primary-foreground">
+          <div className="container-premium">
+            <div className="flex items-center justify-center h-10 overflow-hidden">
+              <p className="text-xs md:text-sm tracking-wide animate-pulse-soft">
+                {announcementText}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="hidden md:flex justify-center items-center px-3 mb-px bg-secondary">
-          <div className="flex items-center flex-wrap gap-3 overflow-hidden max-h-[42px]">
-            {data.headerMenus.map((menu) => (
-              <Link
-                key={menu.href}
-                href={menu.href}
-                className="header-button animate-underline px-2 py-1"
+        {/* Main Header */}
+        <div className={cn(
+          "bg-background transition-all duration-300",
+          isScrolled ? "shadow-sm" : ""
+        )}>
+          <div className="container-premium">
+            {/* Top Row - Logo, Search, Actions */}
+            <div className="flex items-center justify-between py-4 md:py-6">
+              {/* Mobile Menu Button */}
+              <button
+                type="button"
+                aria-expanded={mobileOpen}
+                aria-label="Toggle navigation"
+                onClick={() => setMobileOpen((prev) => !prev)}
+                className="md:hidden p-2 -ml-2 hover:bg-muted rounded-full transition-colors duration-200"
               >
-                {menu.name}
+                {mobileOpen ? <X className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
+              </button>
+
+              {/* Logo - Centered on mobile */}
+              <Link
+                href="/shop"
+                className="flex items-center gap-3 group absolute left-1/2 -translate-x-1/2 md:relative md:left-0 md:translate-x-0"
+              >
+                <Image
+                  src="/images/logo-small.png"
+                  alt={App_NAME}
+                  width={48}
+                  height={48}
+                  className="object-contain transition-transform duration-300 group-hover:scale-105"
+                  priority
+                />
+                <span className="hidden sm:block font-serif text-xl md:text-2xl text-foreground tracking-tight">
+                  {App_NAME}
+                </span>
               </Link>
-            ))}
+
+              {/* Search - Desktop */}
+              <div className="hidden md:block flex-1 max-w-xl mx-8">
+                <Search className="w-full" />
+              </div>
+
+              {/* Right Actions */}
+              <div className="flex items-center gap-2">
+                {/* Search Icon - Mobile */}
+                <button
+                  onClick={() => setSearchExpanded(!searchExpanded)}
+                  className="md:hidden p-2 hover:bg-muted rounded-full transition-colors duration-200"
+                  aria-label="Toggle search"
+                >
+                  <SearchIcon className="w-5 h-5 text-foreground/70" />
+                </button>
+                <div className="hidden md:block">
+                  <Menu />
+                </div>
+                {/* Mobile Cart Only */}
+                <div className="md:hidden">
+                  <Menu layout="mobile-cart-only" />
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Search Expandable */}
+            <div
+              className={cn(
+                "md:hidden overflow-hidden transition-all duration-300 ease-out",
+                searchExpanded ? "max-h-20 opacity-100 pb-4" : "max-h-0 opacity-0"
+              )}
+            >
+              <Search className="w-full" onSubmit={() => setSearchExpanded(false)} />
+            </div>
+          </div>
+
+          {/* Navigation Bar - Desktop */}
+          <nav className="hidden md:block border-t border-border/50 bg-primary">
+            <div className="container-premium">
+              <div className="flex items-center justify-center gap-8 h-12">
+                {data.headerMenus.map((menu) => (
+                  <Link
+                    key={menu.href}
+                    href={menu.href}
+                    className="text-sm font-medium text-primary-foreground hover:text-foreground transition-colors duration-200 animate-underline py-1"
+                  >
+                    {menu.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </nav>
+        </div>
+
+        {/* Mobile Menu Overlay */}
+        <div
+          aria-hidden={!mobileOpen}
+          className={cn(
+            "md:hidden fixed inset-0 z-50 transition-all duration-300",
+            mobileOpen
+              ? "pointer-events-auto"
+              : "pointer-events-none"
+          )}
+        >
+          {/* Backdrop */}
+          <div 
+            className={cn(
+              "absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300",
+              mobileOpen ? "opacity-100" : "opacity-0"
+            )}
+            onClick={() => setMobileOpen(false)}
+          />
+          
+          {/* Sidebar */}
+          <div
+            className={cn(
+              "absolute top-0 left-0 h-full w-[85%] max-w-sm bg-background shadow-2xl transition-transform duration-300 ease-out",
+              mobileOpen ? "translate-x-0" : "-translate-x-full"
+            )}
+          >
+            {/* Mobile Menu Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <Link
+                href="/shop"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2"
+              >
+                <Image
+                  src="/images/logo-small.png"
+                  alt={App_NAME}
+                  width={36}
+                  height={36}
+                  className="object-contain"
+                />
+                <span className="font-serif text-lg">{App_NAME}</span>
+              </Link>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-2 hover:bg-muted rounded-full transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Menu Content */}
+            <div className="flex flex-col h-[calc(100%-73px)] overflow-y-auto">
+              {/* Navigation Links */}
+              <nav className="flex-1 p-4">
+                <div className="space-y-1">
+                  {data.headerMenus.map((menu, index) => (
+                    <Link
+                      key={menu.href}
+                      href={menu.href}
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center px-4 py-3 text-base font-medium text-foreground hover:bg-muted rounded-lg transition-all duration-200"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      {menu.name}
+                    </Link>
+                  ))}
+                </div>
+              </nav>
+
+              {/* Mobile Menu Footer */}
+              <div className="p-4 border-t border-border bg-muted/30">
+                <Menu layout="mobile" onNavigate={() => setMobileOpen(false)} />
+              </div>
+            </div>
           </div>
         </div>
       </header>
     </>
   );
 }
-
-// Export header logic as a hook so other header implementations can reuse it
-// export function useHeaderLogic() {
-//   const [searchOpen, setSearchOpen] = useState(false);
-//   const closeSearch = () => setSearchOpen(false);
-
-//   const [isScrolled, setIsScrolled] = useState(false);
-
-//   useEffect(() => {
-//     const handleScroll = () => {
-//       if (window.scrollY > window.innerHeight * 0.01) {
-//         setIsScrolled(true);
-//       } else {
-//         setIsScrolled(false);
-//       }
-//     };
-
-//     window.addEventListener("scroll", handleScroll);
-//     return () => window.removeEventListener("scroll", handleScroll);
-//   }, []);
-
-//   const [mobileOpen, setMobileOpen] = useState(false);
-//   const [showSidebar, setShowSidebar] = useState(false);
-//   const TRANSITION_MS = 500;
-
-//   const openMobileMenu = () => {
-//     setMobileOpen(true);
-//     setTimeout(() => setShowSidebar(true), 10);
-//   };
-
-//   const closeMobileMenu = () => {
-//     setShowSidebar(false);
-//     setTimeout(() => setMobileOpen(false), TRANSITION_MS);
-//   };
-
-//   const openSearch = () => {
-//     if (mobileOpen) {
-//       setShowSidebar(false);
-//       setTimeout(() => setMobileOpen(false), TRANSITION_MS);
-//       setTimeout(() => setSearchOpen(true), 80);
-//       return;
-//     }
-//     setSearchOpen(true);
-//   };
-
-//   const { user, signOut, isLoading } = useAuth();
-
-//   return {
-//     searchOpen,
-//     setSearchOpen,
-//     closeSearch,
-//     openSearch,
-//     isScrolled,
-//     mobileOpen,
-//     openMobileMenu,
-//     closeMobileMenu,
-//     showSidebar,
-//     setShowSidebar,
-//     TRANSITION_MS,
-//     user,
-//     signOut,
-//     isLoading,
-//   };
-// }

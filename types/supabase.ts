@@ -159,6 +159,7 @@ export interface Database {
           delivered_at: string | null
           customer_notes: string | null
           internal_notes: string | null
+          guest_email: string | null
           created_at: string
           updated_at: string
         }
@@ -182,6 +183,7 @@ export interface Database {
           delivered_at?: string | null
           customer_notes?: string | null
           internal_notes?: string | null
+          guest_email?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -205,6 +207,7 @@ export interface Database {
           delivered_at?: string | null
           customer_notes?: string | null
           internal_notes?: string | null
+          guest_email?: string | null
           created_at?: string
           updated_at?: string
         }

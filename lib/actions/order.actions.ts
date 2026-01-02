@@ -306,6 +306,7 @@ export async function createOrder(orderData: {
   tax: number         // In AED
   discount?: number   // In AED
   paymentMethod?: string
+  guestEmail?: string  // For guest checkout
 }): Promise<{
   success: boolean
   data?: { orderId: string; orderNumber: string }
@@ -316,9 +317,7 @@ export async function createOrder(orderData: {
     const supabase = await createClient()
     
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return { success: false, error: 'Not authenticated' }
-    }
+    // Allow guest checkout - user can be null
 
     // Validate stock availability before creating order
     await connectToDB()
@@ -355,7 +354,7 @@ export async function createOrder(orderData: {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        user_id: user.id,
+        user_id: user?.id || null,  // Allow null for guest orders
         order_number: orderNumber,
         status: 'pending',
         subtotal_cents: currencyToCents(orderData.subtotal),
@@ -367,6 +366,7 @@ export async function createOrder(orderData: {
         billing_address: orderData.billingAddress || null,
         payment_method: orderData.paymentMethod,
         payment_status: 'pending',
+        guest_email: !user ? orderData.guestEmail : null,  // Store guest email if not logged in
       } as OrderInsert)
       .select('id, order_number')
       .single()
