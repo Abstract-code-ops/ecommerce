@@ -3,11 +3,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { ADMIN_EMAILS } from '@/lib/constants'
 
 type AuthContextType = {
   user: User | null
   session: Session | null
   isLoading: boolean
+  isAdmin: boolean
   signOut: () => Promise<void>
 }
 
@@ -15,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   isLoading: true,
+  isAdmin: false,
   signOut: async () => {},
 })
 
@@ -23,6 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
+
+  // Check if current user is an admin
+  const isAdmin = user ? ADMIN_EMAILS.includes(user.email || '') : false
 
   useEffect(() => {
     // Get initial session
@@ -52,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, isAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   )

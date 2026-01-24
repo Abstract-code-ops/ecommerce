@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,19 +13,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  Plus,
-  Search,
-  Filter,
-  Download,
-  Upload,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  Eye,
-  Copy,
-  Archive
-} from 'lucide-react'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -32,113 +20,107 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import Link from 'next/link'
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  Package,
+  Grid3X3,
+  List,
+  Loader2,
+  RefreshCw,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
-import Image from 'next/image'
+import { getAdminProducts, deleteProduct } from '@/lib/actions/admin.actions'
+import { IProduct } from '@/lib/db/models/product.model'
+import { toast } from 'react-toastify'
 
-// Mock products data - Replace with real data from API
-const products = [
-  {
-    id: '1',
-    name: 'Premium Paper Bags (50pc)',
-    slug: 'premium-paper-bags-50pc',
-    category: 'Paper Bags',
-    price: 299,
-    listPrice: 350,
-    stock: 150,
-    status: 'published',
-    sales: 1245,
-    image: '/images/products/paper-bag-1.jpg',
-    createdAt: '2024-01-15',
-  },
-  {
-    id: '2',
-    name: 'Kraft Shopping Bags (100pc)',
-    slug: 'kraft-shopping-bags-100pc',
-    category: 'Kraft Bags',
-    price: 450,
-    listPrice: null,
-    stock: 12,
-    status: 'published',
-    sales: 890,
-    image: '/images/products/kraft-bag-1.jpg',
-    createdAt: '2024-01-12',
-  },
-  {
-    id: '3',
-    name: 'Luxury Gift Bags (25pc)',
-    slug: 'luxury-gift-bags-25pc',
-    category: 'Gift Bags',
-    price: 175,
-    listPrice: 200,
-    stock: 0,
-    status: 'out-of-stock',
-    sales: 654,
-    image: '/images/products/gift-bag-1.jpg',
-    createdAt: '2024-01-10',
-  },
-  {
-    id: '4',
-    name: 'Eco-Friendly Bags (200pc)',
-    slug: 'eco-friendly-bags-200pc',
-    category: 'Eco Bags',
-    price: 820,
-    listPrice: null,
-    stock: 75,
-    status: 'published',
-    sales: 432,
-    image: '/images/products/eco-bag-1.jpg',
-    createdAt: '2024-01-08',
-  },
-  {
-    id: '5',
-    name: 'Custom Print Bags (75pc)',
-    slug: 'custom-print-bags-75pc',
-    category: 'Custom Bags',
-    price: 560,
-    listPrice: 650,
-    stock: 200,
-    status: 'draft',
-    sales: 0,
-    image: '/images/products/custom-bag-1.jpg',
-    createdAt: '2024-01-05',
-  },
-]
-
-const categories = ['All Categories', 'Paper Bags', 'Kraft Bags', 'Gift Bags', 'Eco Bags', 'Custom Bags']
-const statuses = ['All Status', 'published', 'draft', 'out-of-stock']
-
-const getStatusStyles = (status: string) => {
-  switch (status) {
-    case 'published':
-      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-    case 'draft':
-      return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
-    case 'out-of-stock':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-    default:
-      return 'bg-gray-100 text-gray-700'
-  }
-}
-
-const getStockStyles = (stock: number) => {
-  if (stock === 0) return 'text-red-600 dark:text-red-400'
-  if (stock < 20) return 'text-yellow-600 dark:text-yellow-400'
-  return 'text-green-600 dark:text-green-400'
-}
+type ViewMode = 'table' | 'grid'
 
 export default function ProductsPage() {
+  const [products, setProducts] = useState<IProduct[]>([])
+  const [categories, setCategories] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('All Categories')
-  const [selectedStatus, setSelectedStatus] = useState('All Status')
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [viewMode, setViewMode] = useState<ViewMode>('table')
+  
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === 'All Categories' || product.category === selectedCategory
-    const matchesStatus = selectedStatus === 'All Status' || product.status === selectedStatus
-    return matchesSearch && matchesCategory && matchesStatus
-  })
+  const fetchProducts = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const result = await getAdminProducts({
+        search: searchQuery || undefined,
+        category: categoryFilter !== 'all' ? categoryFilter : undefined,
+        status: statusFilter !== 'all' ? statusFilter as any : undefined,
+        page,
+        limit: 20,
+      })
+      
+      if (result.success) {
+        setProducts(result.data || [])
+        setCategories(result.categories || [])
+        setTotalPages(result.totalPages || 1)
+        setTotal(result.total || 0)
+      } else {
+        setError(result.error || 'Failed to fetch products')
+      }
+    } catch (err) {
+      setError('An error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [page, categoryFilter, statusFilter])
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (page === 1) {
+        fetchProducts()
+      } else {
+        setPage(1)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const handleDelete = async (productId: string, productName: string) => {
+    if (!confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    const result = await deleteProduct(productId)
+    if (result.success) {
+      toast.success('Product deleted successfully')
+      fetchProducts()
+    } else {
+      toast.error(result.error || 'Failed to delete product')
+    }
+  }
+
+  const getStockStatus = (stock: number) => {
+    if (stock === 0) return { label: 'Out of Stock', class: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
+    if (stock <= 10) return { label: 'Low Stock', class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' }
+    return { label: 'In Stock', class: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
+  }
 
   return (
     <div className="space-y-6">
@@ -147,19 +129,15 @@ export default function ProductsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground">
-            Manage your product catalog. Add, edit, or remove products.
+            Manage your product catalog ({total} products)
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Upload className="mr-2 h-4 w-4" />
-            Import
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchProducts}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
           </Button>
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          <Button size="sm" asChild>
+          <Button asChild>
             <Link href="/admin/products/new">
               <Plus className="mr-2 h-4 w-4" />
               Add Product
@@ -172,253 +150,311 @@ export default function ProductsPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-9"
               />
             </div>
-
-            {/* Category Filter */}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-
-            {/* Status Filter */}
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                {statuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status === 'All Status' ? status : status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="low-stock">Low Stock</SelectItem>
+                <SelectItem value="out-of-stock">Out of Stock</SelectItem>
               </SelectContent>
             </Select>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center border rounded-lg">
+            <div className="flex border rounded-lg">
               <Button
                 variant={viewMode === 'table' ? 'secondary' : 'ghost'}
                 size="sm"
-                className="rounded-r-none"
                 onClick={() => setViewMode('table')}
+                className="rounded-r-none"
               >
-                Table
+                <List className="h-4 w-4" />
               </Button>
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="sm"
-                className="rounded-l-none"
                 onClick={() => setViewMode('grid')}
+                className="rounded-l-none"
               >
-                Grid
+                <Grid3X3 className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+          <h3 className="text-lg font-medium">Failed to load products</h3>
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={fetchProducts} className="mt-4">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Try Again
+          </Button>
+        </div>
+      )}
+
       {/* Products Table View */}
-      {viewMode === 'table' && (
+      {!isLoading && !error && viewMode === 'table' && (
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b bg-gray-50 dark:bg-gray-800">
+                <thead className="bg-gray-50 dark:bg-gray-900/50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                      <input type="checkbox" className="rounded border-gray-300" />
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Product
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Product</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Category</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Price</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Stock</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Sales</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Price
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Stock
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
-                  {filteredProducts.map((product) => (
-                    <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="px-4 py-3">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
-                            <span className="text-xs text-muted-foreground">IMG</span>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                  {products.map((product) => {
+                    const stockStatus = getStockStatus(product.countInStock || 0)
+                    const productId = product._id?.toString() || ''
+                    return (
+                      <tr key={productId} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0">
+                              {product.images?.[0] && (
+                                <img
+                                  src={product.images[0]}
+                                  alt={product.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium line-clamp-1">{product.name}</p>
+                              <p className="text-sm text-muted-foreground">{product.slug}</p>
+                            </div>
                           </div>
+                        </td>
+                        <td className="px-4 py-4 text-sm">{product.category}</td>
+                        <td className="px-4 py-4">
                           <div>
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-muted-foreground">{product.slug}</p>
+                            <span className="font-medium">AED {product.price}</span>
+                            {product.listPrice && product.listPrice > product.price && (
+                              <span className="text-sm text-muted-foreground line-through ml-2">
+                                AED {product.listPrice}
+                              </span>
+                            )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{product.category}</td>
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium">AED {product.price}</p>
-                          {product.listPrice && (
-                            <p className="text-sm text-muted-foreground line-through">
-                              AED {product.listPrice}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={cn("font-medium", getStockStyles(product.stock))}>
-                          {product.stock}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{product.sales}</td>
-                      <td className="px-4 py-3">
-                        <span className={cn(
-                          "px-2 py-1 rounded-full text-xs font-medium capitalize",
-                          getStatusStyles(product.status)
-                        )}>
-                          {product.status.replace('-', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                              <Link href={`/admin/products/${product.id}`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Details
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/admin/products/${product.id}/edit`}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Archive className="mr-2 h-4 w-4" />
-                              Archive
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600 dark:text-red-400">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium",
+                            stockStatus.class
+                          )}>
+                            {product.countInStock || 0} units
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium",
+                            product.isPublished
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
+                          )}>
+                            {product.isPublished ? 'Published' : 'Draft'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem asChild>
+                                <Link href={`/shop/products/${product.slug}`} target="_blank">
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View in Store
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/admin/products/${productId}`}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => handleDelete(productId, product.name)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between border-t px-4 py-3">
-              <p className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">1</span> to{' '}
-                <span className="font-medium">{filteredProducts.length}</span> of{' '}
-                <span className="font-medium">{products.length}</span> products
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>
-                  Previous
-                </Button>
-                <Button variant="outline" size="sm">
-                  Next
-                </Button>
+            {products.length === 0 && (
+              <div className="p-12 text-center">
+                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium">No products found</h3>
+                <p className="text-muted-foreground">
+                  {searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
+                    ? 'Try adjusting your search or filters'
+                    : 'Get started by adding your first product'}
+                </p>
+                {!searchQuery && categoryFilter === 'all' && statusFilter === 'all' && (
+                  <Button asChild className="mt-4">
+                    <Link href="/admin/products/new">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Product
+                    </Link>
+                  </Button>
+                )}
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       )}
 
       {/* Products Grid View */}
-      {viewMode === 'grid' && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className="overflow-hidden">
-              <div className="aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                <span className="text-muted-foreground">Image</span>
-              </div>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium line-clamp-1">{product.name}</h3>
-                    <p className="text-sm text-muted-foreground">{product.category}</p>
+      {!isLoading && !error && viewMode === 'grid' && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {products.map((product) => {
+            const stockStatus = getStockStatus(product.countInStock || 0)
+            const productId = product._id?.toString() || ''
+            return (
+              <Card key={productId} className="overflow-hidden">
+                <div className="aspect-square bg-gray-100 dark:bg-gray-800 relative">
+                  {product.images?.[0] && (
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                  <div className="absolute top-2 right-2">
+                    <span className={cn(
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      product.isPublished
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-700"
+                    )}>
+                      {product.isPublished ? 'Published' : 'Draft'}
+                    </span>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="-mr-2">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/products/${product.id}/edit`}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold">AED {product.price}</p>
-                    {product.listPrice && (
-                      <p className="text-sm text-muted-foreground line-through">
-                        AED {product.listPrice}
-                      </p>
-                    )}
+                <CardContent className="p-4">
+                  <h3 className="font-medium line-clamp-1">{product.name}</h3>
+                  <p className="text-sm text-muted-foreground">{product.category}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="font-bold">AED {product.price}</span>
+                    <span className={cn(
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      stockStatus.class
+                    )}>
+                      {product.countInStock || 0} left
+                    </span>
                   </div>
-                  <span className={cn(
-                    "px-2 py-1 rounded-full text-xs font-medium capitalize",
-                    getStatusStyles(product.status)
-                  )}>
-                    {product.status.replace('-', ' ')}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-                  <span className={cn(getStockStyles(product.stock))}>
-                    {product.stock} in stock
-                  </span>
-                  <span>{product.sales} sold</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex gap-2 mt-3">
+                    <Button variant="outline" size="sm" className="flex-1" asChild>
+                      <Link href={`/admin/products/${productId}`}>
+                        <Edit className="mr-1 h-3 w-3" />
+                        Edit
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => handleDelete(productId, product.name)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!isLoading && !error && totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Page {page} of {totalPages} ({total} products)
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage(p => p - 1)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

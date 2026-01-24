@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,21 +19,26 @@ import {
   X,
   Plus,
   Link as LinkIcon,
-  Loader2
+  Loader2,
+  Trash2
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
-import { createProduct, getAdminProducts } from '@/lib/actions/admin.actions'
-import { uploadMultipleToCloudinary } from '@/lib/actions/upload.actions'
+import { getAdminProductById, updateProduct, deleteProduct } from '@/lib/actions/admin.actions'
+import { uploadMultipleToCloudinary, deleteFromCloudinary } from '@/lib/actions/upload.actions'
 import { toast } from 'react-toastify'
 
-// Default categories - can be extended
+// Default categories and tags
 const defaultCategories = ['Paper Bags', 'Kraft Bags', 'Gift Bags', 'Eco Bags', 'Custom Bags', 'Shopping Bags', 'Food Packaging']
 const defaultTags = ['Featured', 'New Arrival', 'Best Seller', 'Sale', 'Limited Edition', 'Eco-Friendly', 'Premium']
 
-export default function NewProductPage() {
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [categories, setCategories] = useState<string[]>(defaultCategories)
@@ -42,6 +47,7 @@ export default function NewProductPage() {
   const [newTagInput, setNewTagInput] = useState('')
   const [showImageUrlInput, setShowImageUrlInput] = useState(false)
   const [imageUrl, setImageUrl] = useState('')
+  const [uploadingImages, setUploadingImages] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -65,24 +71,58 @@ export default function NewProductPage() {
 
   const [newSize, setNewSize] = useState('')
   const [newColor, setNewColor] = useState('')
-  const [uploadingImages, setUploadingImages] = useState(false)
 
-  // Load existing categories from products on mount
+  // Load product data
   useEffect(() => {
-    const loadCategories = async () => {
-      const result = await getAdminProducts({ limit: 100 })
-      if (result.success && result.data) {
-        const existingCategories = [...new Set(result.data.map((p: any) => p.category).filter(Boolean))]
-        const allCategories = [...new Set([...defaultCategories, ...existingCategories])]
-        setCategories(allCategories)
+    const loadProduct = async () => {
+      setIsLoading(true)
+      try {
+        const result = await getAdminProductById(id)
         
-        const existingTags = [...new Set(result.data.flatMap((p: any) => p.tags || []).filter(Boolean))]
-        const allTags = [...new Set([...defaultTags, ...existingTags])]
-        setAvailableTags(allTags)
+        if (result.success && result.data) {
+          const product = result.data
+          setFormData({
+            name: product.name || '',
+            slug: product.slug || '',
+            description: product.description || '',
+            category: product.category || '',
+            price: product.price?.toString() || '',
+            listPrice: product.listPrice?.toString() || '',
+            countInStock: product.countInStock?.toString() || '',
+            isPublished: product.isPublished ?? true,
+            tags: product.tags || [],
+            sizes: product.sizes || [],
+            colors: product.colors || [],
+            images: product.images || [],
+            dimensions: {
+              width: product.dimensions?.width?.toString() || '',
+              height: product.dimensions?.height?.toString() || '',
+              depth: product.dimensions?.depth?.toString() || ''
+            }
+          })
+          
+          // Set categories and tags
+          if (result.categories) {
+            setCategories([...new Set([...defaultCategories, ...result.categories])])
+          }
+          if (result.tags) {
+            setAvailableTags([...new Set([...defaultTags, ...result.tags])])
+          }
+        } else {
+          toast.error(result.error || 'Failed to load product')
+          router.push('/admin/products')
+        }
+      } catch (error) {
+        console.error('Error loading product:', error)
+        toast.error('An error occurred while loading the product')
+        router.push('/admin/products')
+      } finally {
+        setIsLoading(false)
       }
     }
-    loadCategories()
-  }, [])
+    
+    loadProduct()
+  }, [id, router])
 
   // Auto-generate slug from name
   const handleNameChange = (name: string) => {
@@ -205,7 +245,18 @@ export default function NewProductPage() {
     }
   }
 
-  const removeImage = (index: number) => {
+  const removeImage = async (index: number) => {
+    const imageToRemove = formData.images[index]
+    
+    // Try to delete from Cloudinary if it's a Cloudinary URL
+    if (imageToRemove.includes('cloudinary.com')) {
+      try {
+        await deleteFromCloudinary(imageToRemove)
+      } catch (error) {
+        console.error('Failed to delete from Cloudinary:', error)
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
@@ -226,7 +277,7 @@ export default function NewProductPage() {
       return
     }
 
-    setIsLoading(true)
+    setIsSaving(true)
     
     try {
       const productData = {
@@ -249,20 +300,52 @@ export default function NewProductPage() {
         }
       }
 
-      const result = await createProduct(productData)
+      const result = await updateProduct(id, productData)
       
       if (result.success) {
-        toast.success('Product created successfully!')
+        toast.success('Product updated successfully!')
         router.push('/admin/products')
       } else {
-        toast.error(result.error || 'Failed to create product')
+        toast.error(result.error || 'Failed to update product')
       }
     } catch (error) {
-      console.error('Error creating product:', error)
-      toast.error('An error occurred while creating the product')
+      console.error('Error updating product:', error)
+      toast.error('An error occurred while updating the product')
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return
+    }
+
+    setIsDeleting(true)
+    
+    try {
+      const result = await deleteProduct(id)
+      
+      if (result.success) {
+        toast.success('Product deleted successfully!')
+        router.push('/admin/products')
+      } else {
+        toast.error(result.error || 'Failed to delete product')
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      toast.error('An error occurred while deleting the product')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
@@ -276,15 +359,32 @@ export default function NewProductPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Add New Product</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
             <p className="text-muted-foreground">
-              Fill in the details to create a new product
+              Update product details
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? (
+          <Button 
+            variant="destructive" 
+            onClick={handleDelete} 
+            disabled={isDeleting || isSaving}
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </>
+            )}
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSaving || isDeleting}>
+            {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Saving...
@@ -292,7 +392,7 @@ export default function NewProductPage() {
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Save Product
+                Save Changes
               </>
             )}
           </Button>
@@ -308,37 +408,39 @@ export default function NewProductPage() {
               <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
                 <CardDescription>
-                  Product name, description, and other basic details
+                  Product name, description, and identifiers
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Product Name *</label>
-                  <Input
-                    placeholder="Enter product name"
-                    value={formData.name}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    required
-                  />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Product Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      placeholder="Enter product name"
+                      value={formData.name}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Slug <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      placeholder="product-slug"
+                      value={formData.slug}
+                      onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      URL-friendly identifier
+                    </p>
+                  </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Slug *</label>
-                  <Input
-                    placeholder="product-slug"
-                    value={formData.slug}
-                    onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    URL-friendly version of the name. Auto-generated from product name.
-                  </p>
-                </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Description</label>
                   <textarea
-                    className="w-full min-h-32 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-full min-h-[120px] px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="Enter product description..."
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -350,29 +452,21 @@ export default function NewProductPage() {
             {/* Images */}
             <Card>
               <CardHeader>
-                <CardTitle>Product Images *</CardTitle>
+                <CardTitle>Product Images</CardTitle>
                 <CardDescription>
-                  Upload product images or add by URL. First image will be the main display image.
+                  Upload or add images for this product
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {/* Uploaded Images */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {formData.images.map((image, index) => (
-                    <div 
-                      key={index} 
-                      className="aspect-square rounded-lg border bg-gray-50 dark:bg-gray-800 overflow-hidden relative group"
-                    >
-                      <img 
-                        src={image} 
-                        alt={`Product ${index + 1}`}
-                        className="h-full w-full object-cover"
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden border bg-muted group">
+                      <Image
+                        src={image}
+                        alt={`Product image ${index + 1}`}
+                        fill
+                        className="object-cover"
                       />
-                      {index === 0 && (
-                        <span className="absolute top-2 left-2 px-2 py-1 bg-primary text-primary-foreground text-xs rounded">
-                          Main
-                        </span>
-                      )}
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
@@ -448,137 +542,35 @@ export default function NewProductPage() {
               </CardContent>
             </Card>
 
-            {/* Pricing */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Pricing</CardTitle>
-                <CardDescription>
-                  Set your product pricing and compare at price
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Price (AED) *</label>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Compare at Price (AED)</label>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      value={formData.listPrice}
-                      onChange={(e) => setFormData(prev => ({ ...prev, listPrice: e.target.value }))}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Original price to show discount
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Inventory */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Inventory</CardTitle>
-                <CardDescription>
-                  Manage stock levels and inventory tracking
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Stock Quantity *</label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    min="0"
-                    value={formData.countInStock}
-                    onChange={(e) => setFormData(prev => ({ ...prev, countInStock: e.target.value }))}
-                    required
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Dimensions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Dimensions</CardTitle>
-                <CardDescription>
-                  Product dimensions in centimeters
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Width (cm)</label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      step="0.1"
-                      value={formData.dimensions.width}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dimensions: { ...prev.dimensions, width: e.target.value }
-                      }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Height (cm)</label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      step="0.1"
-                      value={formData.dimensions.height}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dimensions: { ...prev.dimensions, height: e.target.value }
-                      }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Depth (cm)</label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      step="0.1"
-                      value={formData.dimensions.depth}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dimensions: { ...prev.dimensions, depth: e.target.value }
-                      }))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Variants */}
             <Card>
               <CardHeader>
                 <CardTitle>Variants</CardTitle>
                 <CardDescription>
-                  Add sizes and colors for your product
+                  Add sizes and colors for this product
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4">
                 {/* Sizes */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <label className="text-sm font-medium">Sizes</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {formData.sizes.map((size) => (
+                      <span
+                        key={size}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary text-sm"
+                      >
+                        {size}
+                        <button
+                          type="button"
+                          onClick={() => removeSize(size)}
+                          className="hover:text-red-500"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                   <div className="flex gap-2">
                     <Input
                       placeholder="Add size (e.g., Small, Medium, Large)"
@@ -590,30 +582,28 @@ export default function NewProductPage() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  {formData.sizes.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {formData.sizes.map((size) => (
-                        <span
-                          key={size}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-sm"
-                        >
-                          {size}
-                          <button
-                            type="button"
-                            onClick={() => removeSize(size)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* Colors */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <label className="text-sm font-medium">Colors</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {formData.colors.map((color) => (
+                      <span
+                        key={color}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary text-sm"
+                      >
+                        {color}
+                        <button
+                          type="button"
+                          onClick={() => removeColor(color)}
+                          className="hover:text-red-500"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                   <div className="flex gap-2">
                     <Input
                       placeholder="Add color (e.g., Red, Blue, Green)"
@@ -625,25 +615,59 @@ export default function NewProductPage() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  {formData.colors.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {formData.colors.map((color) => (
-                        <span
-                          key={color}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-sm"
-                        >
-                          {color}
-                          <button
-                            type="button"
-                            onClick={() => removeColor(color)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Dimensions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Dimensions</CardTitle>
+                <CardDescription>
+                  Physical dimensions of the product
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Width (cm)</label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={formData.dimensions.width}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        dimensions: { ...prev.dimensions, width: e.target.value }
+                      }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Height (cm)</label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={formData.dimensions.height}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        dimensions: { ...prev.dimensions, height: e.target.value }
+                      }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Depth (cm)</label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={formData.dimensions.depth}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        dimensions: { ...prev.dimensions, depth: e.target.value }
+                      }))}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -662,23 +686,20 @@ export default function NewProductPage() {
                   onValueChange={(value) => setFormData(prev => ({ ...prev, isPublished: value === 'published' }))}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="published">Published</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {formData.isPublished ? 'Product will be visible in the store' : 'Product will be hidden from customers'}
-                </p>
               </CardContent>
             </Card>
 
             {/* Category */}
             <Card>
               <CardHeader>
-                <CardTitle>Category *</CardTitle>
+                <CardTitle>Category <span className="text-red-500">*</span></CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Select
@@ -696,22 +717,16 @@ export default function NewProductPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                
-                {/* Add new category */}
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-2">Or add a new category:</p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="New category name"
-                      value={newCategory}
-                      onChange={(e) => setNewCategory(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewCategory())}
-                      className="text-sm"
-                    />
-                    <Button type="button" variant="outline" size="sm" onClick={addNewCategory}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="New category"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewCategory())}
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={addNewCategory}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -720,9 +735,6 @@ export default function NewProductPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Tags</CardTitle>
-                <CardDescription>
-                  Select tags or add new ones
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap gap-2">
@@ -732,32 +744,82 @@ export default function NewProductPage() {
                       type="button"
                       onClick={() => toggleTag(tag)}
                       className={cn(
-                        "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                        "px-3 py-1 rounded-full text-sm border transition-colors",
                         formData.tags.includes(tag)
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-secondary"
                       )}
                     >
                       {tag}
                     </button>
                   ))}
                 </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="New tag"
+                    value={newTagInput}
+                    onChange={(e) => setNewTagInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewTag())}
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={addNewTag}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-                {/* Add new tag */}
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-2">Add a new tag:</p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="New tag name"
-                      value={newTagInput}
-                      onChange={(e) => setNewTagInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewTag())}
-                      className="text-sm"
-                    />
-                    <Button type="button" variant="outline" size="sm" onClick={addNewTag}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {/* Pricing */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Pricing</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Price (AED) <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.price}
+                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Compare at Price (AED)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.listPrice}
+                    onChange={(e) => setFormData(prev => ({ ...prev, listPrice: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Original price for showing discounts
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Inventory */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Stock Quantity <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={formData.countInStock}
+                    onChange={(e) => setFormData(prev => ({ ...prev, countInStock: e.target.value }))}
+                  />
                 </div>
               </CardContent>
             </Card>

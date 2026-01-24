@@ -84,7 +84,7 @@ export default function Search({ className, onSubmit }: SearchProps) {
         </button>
       </form>
       {open && results.length > 0 && (
-        <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50 mt-1 overflow-hidden">
+        <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-[100] mt-1 max-h-80 overflow-y-auto">
           {results.map((product) => (
             <Link 
               href={`/shop/products/${product.slug}`} 

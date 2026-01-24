@@ -1,5 +1,5 @@
 'use client'
-import { ShoppingBag, User, LogIn, Heart } from "lucide-react"
+import { ShoppingBag, User, LogIn, Heart, Shield } from "lucide-react"
 import Link from "next/link"
 import useCartStore from "@/lib/hooks/useCartStore"
 import useWishlistStore from "@/lib/hooks/useWishlistStore"
@@ -28,7 +28,7 @@ export default function Menu({ layout = "desktop", onNavigate }: MenuProps) {
   const wishlistCount = mounted ? wishlistItems.length : 0
   const isMobile = layout === "mobile"
   const isMobileCartOnly = layout === "mobile-cart-only"
-  const { user, signOut } = useAuth()
+  const { user, signOut, isAdmin } = useAuth()
   
   // Animation state for cart badge
   const [cartBounce, setCartBounce] = useState(false)
@@ -97,6 +97,16 @@ export default function Menu({ layout = "desktop", onNavigate }: MenuProps) {
               
               {/* Navigation Links */}
               <div className="space-y-1">
+                {isAdmin && (
+                  <Link 
+                    href="/admin" 
+                    onClick={onNavigate} 
+                    className="flex items-center gap-3 px-4 py-3 text-primary font-medium hover:bg-primary/10 rounded-lg transition-colors"
+                  >
+                    <Shield className="w-5 h-5" />
+                    <span>Admin Dashboard</span>
+                  </Link>
+                )}
                 <Link 
                   href="/profile" 
                   onClick={onNavigate} 
@@ -193,6 +203,19 @@ export default function Menu({ layout = "desktop", onNavigate }: MenuProps) {
               </Link>
             )}
           </>
+        )}
+        
+        {/* Admin Button - Desktop (only for admins) */}
+        {!isMobile && isAdmin && (
+          <Link
+            href="/admin"
+            onClick={onNavigate}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-full transition-all duration-200"
+            title="Admin Dashboard"
+          >
+            <Shield className="w-4 h-4" />
+            <span>Admin</span>
+          </Link>
         )}
         
         {/* Wishlist Button - Desktop */}

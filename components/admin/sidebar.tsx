@@ -8,7 +8,6 @@ import {
   Package,
   ShoppingCart,
   Users,
-  BarChart3,
   Settings,
   Truck,
   RotateCcw,
@@ -41,21 +40,13 @@ const navigation = [
     children: [
       { name: 'All Products', href: '/admin/products' },
       { name: 'Add Product', href: '/admin/products/new' },
-      { name: 'Categories', href: '/admin/products/categories' },
-      { name: 'Inventory', href: '/admin/products/inventory' },
     ]
   },
   {
     name: 'Orders',
     href: '/admin/orders',
     icon: ShoppingCart,
-    description: 'Track and manage orders',
-    children: [
-      { name: 'All Orders', href: '/admin/orders' },
-      { name: 'Pending', href: '/admin/orders?status=pending' },
-      { name: 'Processing', href: '/admin/orders?status=processing' },
-      { name: 'Shipped', href: '/admin/orders?status=shipped' },
-    ]
+    description: 'Track and manage orders'
   },
   {
     name: 'Customers',
@@ -64,39 +55,10 @@ const navigation = [
     description: 'View customer information'
   },
   {
-    name: 'Shipping',
-    href: '/admin/shipping',
-    icon: Truck,
-    description: 'Manage shipments & tracking',
-    children: [
-      { name: 'All Shipments', href: '/admin/shipping' },
-      { name: 'Pending Delivery', href: '/admin/shipping?status=pending' },
-      { name: 'In Transit', href: '/admin/shipping?status=in-transit' },
-    ]
-  },
-  {
     name: 'Returns',
     href: '/admin/returns',
     icon: RotateCcw,
     description: 'Handle returns & refunds'
-  },
-  {
-    name: 'Discounts',
-    href: '/admin/discounts',
-    icon: Tag,
-    description: 'Create & manage promotions'
-  },
-  {
-    name: 'Analytics',
-    href: '/admin/analytics',
-    icon: BarChart3,
-    description: 'Sales & performance data',
-    children: [
-      { name: 'Overview', href: '/admin/analytics' },
-      { name: 'Sales Report', href: '/admin/analytics/sales' },
-      { name: 'Product Performance', href: '/admin/analytics/products' },
-      { name: 'Customer Insights', href: '/admin/analytics/customers' },
-    ]
   },
   {
     name: 'Settings',

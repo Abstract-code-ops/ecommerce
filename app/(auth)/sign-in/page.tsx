@@ -123,18 +123,6 @@ const SignInPage = () => {
           <h3 className="mb-1.5 text-2xl text-center font-semibold">Welcome Back</h3>
           <p className="text-black/70 text-center">Enter your details to log in.</p>
         </div>
-        <div className="flex flex-wrap gap-4 sm:gap-6">
-          <button 
-            type="button"
-            onClick={() => {
-              setEmail('admin@globaledge.ae')
-              setPassword('admin123')
-            }}
-            className="btn btn-outline btn-primary grow"
-          >
-            Login as Admin
-          </button>
-        </div>
         <div className="space-y-4">
           <form className="mb-4 space-y-4" onSubmit={handleSignIn}>
             <div>

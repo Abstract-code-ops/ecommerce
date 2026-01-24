@@ -10,10 +10,11 @@ import { formatCurrency } from '@/lib/utils'
 import { 
   Package, Truck, CheckCircle2, Clock, ChevronRight, 
   Search, Filter, Calendar, Eye, RotateCcw, Download,
-  MapPin, X, AlertCircle, Loader2
+  MapPin, X, AlertCircle, Loader2, Camera, Upload
 } from 'lucide-react'
 import { getOrders, cancelOrder } from '@/lib/actions/order.actions'
-import { FormattedOrder, ShippingAddressSnapshot } from '@/types/supabase'
+import { createReturn, getReturns } from '@/lib/actions/return.actions'
+import { FormattedOrder, ShippingAddressSnapshot, ReturnReason, RETURN_REASON_LABELS } from '@/types/supabase'
 import { toast } from 'react-toastify'
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
@@ -83,24 +84,60 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null)
+  
+  // Return request state
+  const [showReturnModal, setShowReturnModal] = useState(false)
+  const [selectedOrderForReturn, setSelectedOrderForReturn] = useState<Order | null>(null)
+  const [selectedItemForReturn, setSelectedItemForReturn] = useState<{
+    id: string
+    name: string
+    image: string
+    quantity: number
+    price: number
+  } | null>(null)
+  const [returnReason, setReturnReason] = useState<ReturnReason>('damaged')
+  const [returnDetails, setReturnDetails] = useState('')
+  const [isSubmittingReturn, setIsSubmittingReturn] = useState(false)
+  
+  // Success modal state (shown after return request is submitted)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successOrderNumber, setSuccessOrderNumber] = useState<string>('')
+  
+  // Track items that already have return requests (Set of order_item_ids)
+  const [itemsWithReturns, setItemsWithReturns] = useState<Set<string>>(new Set())
 
-  // Fetch orders from Supabase
+  // Fetch orders and existing returns from Supabase
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchData = async () => {
       setIsLoading(true)
       try {
-        const result = await getOrders()
-        if (result.success && result.data) {
-          setOrders(result.data)
+        // Fetch orders and returns in parallel
+        const [ordersResult, returnsResult] = await Promise.all([
+          getOrders(),
+          getReturns()
+        ])
+        
+        if (ordersResult.success && ordersResult.data) {
+          setOrders(ordersResult.data)
+        }
+        
+        // Build set of order_item_ids that have active returns (not rejected)
+        if (returnsResult.success && returnsResult.data) {
+          const itemIds = new Set(
+            returnsResult.data
+              .filter(r => r.status !== 'rejected')
+              .map(r => r.orderItemId)
+          )
+          setItemsWithReturns(itemIds)
         }
       } catch (error) {
-        console.error('Error fetching orders:', error)
+        console.error('Error fetching data:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchOrders()
+    fetchData()
   }, [])
 
   // Handle cancel order
@@ -127,6 +164,56 @@ export default function OrdersPage() {
     } finally {
       setCancellingOrderId(null)
     }
+  }
+
+  // Handle return request
+  const handleReturnRequest = async () => {
+    if (!selectedOrderForReturn || !selectedItemForReturn) return
+    
+    setIsSubmittingReturn(true)
+    try {
+      const result = await createReturn({
+        orderId: selectedOrderForReturn.id,
+        orderItemId: selectedItemForReturn.id,
+        reason: returnReason,
+        reasonDetails: returnDetails || undefined,
+        quantity: selectedItemForReturn.quantity,
+      })
+      
+      if (result.success) {
+        // Store order number and item id for success modal
+        const orderNum = selectedOrderForReturn.orderNumber
+        const itemId = selectedItemForReturn.id
+        
+        // Add item to the set of items with returns
+        setItemsWithReturns(prev => new Set([...prev, itemId]))
+        
+        // Reset return modal state
+        setShowReturnModal(false)
+        setSelectedOrderForReturn(null)
+        setSelectedItemForReturn(null)
+        setReturnReason('damaged')
+        setReturnDetails('')
+        
+        // Show success modal with contact info
+        setSuccessOrderNumber(orderNum)
+        setShowSuccessModal(true)
+      } else {
+        toast.error(result.error || 'Failed to submit return request')
+      }
+    } catch (error) {
+      console.error('Error submitting return:', error)
+      toast.error('Something went wrong')
+    } finally {
+      setIsSubmittingReturn(false)
+    }
+  }
+
+  // Open return modal for an item
+  const openReturnModal = (order: Order, item: { id: string; name: string; image: string; quantity: number; price: number }) => {
+    setSelectedOrderForReturn(order)
+    setSelectedItemForReturn(item)
+    setShowReturnModal(true)
   }
 
   const filteredOrders = orders.filter(order => {
@@ -371,12 +458,14 @@ export default function OrdersPage() {
                           <div className="space-y-3">
                             <h4 className="text-sm font-medium">Order Items</h4>
                             {order.items.map((item) => (
-                              <Link
+                              <div
                                 key={item.id}
-                                href={`/shop/products/${item.slug}`}
                                 className="flex items-center gap-4 p-3 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors"
                               >
-                                <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden relative shrink-0">
+                                <Link
+                                  href={`/shop/products/${item.slug}`}
+                                  className="w-14 h-14 rounded-lg bg-muted overflow-hidden relative shrink-0"
+                                >
                                   <Image
                                     src={item.image || '/images/placeholder.jpg'}
                                     alt={item.name}
@@ -384,17 +473,41 @@ export default function OrdersPage() {
                                     className="object-cover"
                                     unoptimized
                                   />
-                                </div>
+                                </Link>
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-sm truncate">{item.name}</p>
+                                  <Link href={`/shop/products/${item.slug}`}>
+                                    <p className="font-medium text-sm truncate hover:text-primary">{item.name}</p>
+                                  </Link>
                                   <p className="text-xs text-muted-foreground">
                                     Qty: {item.quantity} × {formatCurrency(item.price)}
                                   </p>
                                 </div>
-                                <p className="font-medium text-sm">
-                                  {formatCurrency(item.totalPrice)}
-                                </p>
-                              </Link>
+                                <div className="flex items-center gap-3">
+                                  <p className="font-medium text-sm">
+                                    {formatCurrency(item.totalPrice)}
+                                  </p>
+                                  {order.status === 'delivered' && (
+                                    itemsWithReturns.has(item.id) ? (
+                                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                        Return Requested
+                                      </span>
+                                    ) : (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-xs h-8 px-2"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          openReturnModal(order, item)
+                                        }}
+                                      >
+                                        <RotateCcw className="w-3 h-3 mr-1" />
+                                        Return
+                                      </Button>
+                                    )
+                                  )}
+                                </div>
+                              </div>
                             ))}
                           </div>
 
@@ -477,10 +590,27 @@ export default function OrdersPage() {
                               </Button>
                             )}
                             {order.status === 'delivered' && (
-                              <Button variant="outline" size="sm">
-                                <RotateCcw className="w-4 h-4 mr-2" />
-                                Reorder
-                              </Button>
+                              // Only show Request Return button if at least one item doesn't have a return
+                              order.items.some(item => !itemsWithReturns.has(item.id)) && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    // Find the first item without a return request
+                                    const itemWithoutReturn = order.items.find(item => !itemsWithReturns.has(item.id))
+                                    if (itemWithoutReturn) {
+                                      openReturnModal(order, itemWithoutReturn)
+                                    } else {
+                                      // Expand to show items with return buttons
+                                      setExpandedOrder(order.id)
+                                    }
+                                  }}
+                                >
+                                  <Package className="w-4 h-4 mr-2" />
+                                  Request Return
+                                </Button>
+                              )
                             )}
                             <Button variant="outline" size="sm">
                               <Download className="w-4 h-4 mr-2" />
@@ -499,6 +629,177 @@ export default function OrdersPage() {
               )
             })}
           </AnimatePresence>
+        </div>
+      )}
+
+      {/* Return Request Modal */}
+      {showReturnModal && selectedOrderForReturn && selectedItemForReturn && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setShowReturnModal(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="relative bg-background rounded-2xl shadow-lg w-full max-w-md m-4 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Request Return</h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowReturnModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Product Info */}
+              <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl">
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                  <Image
+                    src={selectedItemForReturn.image || '/images/placeholder.jpg'}
+                    alt={selectedItemForReturn.name}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <div>
+                  <p className="font-medium">{selectedItemForReturn.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Qty: {selectedItemForReturn.quantity} × {formatCurrency(selectedItemForReturn.price)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Order: {selectedOrderForReturn.orderNumber}
+                  </p>
+                </div>
+              </div>
+
+              {/* Return Reason */}
+              <div>
+                <label className="text-sm font-medium block mb-2">Reason for return *</label>
+                <select
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value as ReturnReason)}
+                  className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                >
+                  {(Object.entries(RETURN_REASON_LABELS) as [ReturnReason, string][]).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Additional Details */}
+              <div>
+                <label className="text-sm font-medium block mb-2">Additional details (optional)</label>
+                <textarea
+                  value={returnDetails}
+                  onChange={(e) => setReturnDetails(e.target.value)}
+                  placeholder="Please describe the issue in more detail..."
+                  className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm min-h-[100px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                />
+              </div>
+
+              {/* Info Notice */}
+              <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  <p className="font-medium">Return Policy</p>
+                  <p className="mt-1">Returns are accepted within 14 days of delivery. Items must be in original condition with tags attached.</p>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleReturnRequest}
+                disabled={isSubmittingReturn}
+              >
+                {isSubmittingReturn ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Submit Return Request
+                  </>
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Return Success Modal - Contact Info */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setShowSuccessModal(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="relative bg-background rounded-2xl shadow-lg w-full max-w-md m-4"
+          >
+            <div className="p-6 space-y-6">
+              {/* Success Icon */}
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                </div>
+              </div>
+
+              {/* Success Message */}
+              <div className="text-center">
+                <h2 className="text-xl font-semibold mb-2">Return Request Submitted!</h2>
+                <p className="text-muted-foreground text-sm">
+                  Your return request has been received. Our team will review it and get back to you within 1-2 business days.
+                </p>
+              </div>
+
+              {/* Order Reference */}
+              <div className="bg-muted/30 rounded-xl p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Order Reference</p>
+                <p className="font-mono font-semibold text-lg">{successOrderNumber}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Use this number to check your refund status
+                </p>
+              </div>
+
+              {/* Contact Info */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Need Help?</p>
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  For any questions about your return or refund status, please contact us:
+                </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium text-blue-700 dark:text-blue-300">Email:</span>
+                  <a 
+                    href="mailto:support@gmqg.com" 
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    support@gmqg.com
+                  </a>
+                </div>
+                <p className="text-xs text-blue-500 dark:text-blue-400 mt-2">
+                  Please include your order number ({successOrderNumber}) in your email for faster assistance.
+                </p>
+              </div>
+
+              {/* View Returns Link */}
+              <div className="flex flex-col gap-3">
+                <Button asChild className="w-full">
+                  <Link href="/profile/returns">View My Returns</Link>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setShowSuccessModal(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>

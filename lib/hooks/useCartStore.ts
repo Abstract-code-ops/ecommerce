@@ -15,8 +15,36 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { Cart, OrderItem } from "@/types";
-import { calculateDateAndPrice } from "../actions/order.actions";
-import { generateId } from "../utils";
+import { generateId, round2Decimals } from "../utils";
+
+/**
+ * Calculate cart pricing (synchronous version for client-side use)
+ * Must match the server-side calculateDateAndPrice logic
+ */
+const calculateCartTotals = (items: OrderItem[]) => {
+    const itemPrice = round2Decimals(
+        items.reduce((acc, item) => acc + item.totalPrice, 0)
+    );
+    
+    // 15% shipping
+    const shippingPrice = round2Decimals(itemPrice * 0.15);
+    
+    // 5% tax (VAT)
+    const taxPrice = round2Decimals(itemPrice * 0.05);
+    
+    const totalPrice = round2Decimals(
+        shippingPrice + itemPrice + taxPrice
+    );
+    
+    const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+
+    return {
+        totalPrice,
+        taxPrice,
+        shippingPrice,
+        totalItems,
+    };
+};
 
 /**
  * Initial cart state
@@ -126,7 +154,7 @@ const useCartStore = create(
                     cart: {
                         ...get().cart,
                         items: updatedCartItems,
-                        ...calculateDateAndPrice({ items: updatedCartItems }),
+                        ...calculateCartTotals(updatedCartItems),
                     },
                 });
 
@@ -149,7 +177,7 @@ const useCartStore = create(
                     cart: {
                         ...get().cart,
                         items: updatedCartItems,
-                        ...calculateDateAndPrice({ items: updatedCartItems }),
+                        ...calculateCartTotals(updatedCartItems),
                     },
                 });
             },
@@ -186,7 +214,7 @@ const useCartStore = create(
                     cart: {
                         ...get().cart,
                         items: updatedCartItems,
-                        ...calculateDateAndPrice({ items: updatedCartItems }),
+                        ...calculateCartTotals(updatedCartItems),
                     },
                 });
             },

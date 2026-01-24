@@ -11,13 +11,9 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, isAdmin } = useAuth()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-
-  // Check if user is admin - add more emails to the array as needed
-  const adminEmails = ['admin@globaledge.ae']
-  const isAdmin: boolean = adminEmails.includes(user?.email || '')
 
 
   useEffect(() => {

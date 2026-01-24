@@ -5,7 +5,6 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import {
   Menu,
-  Bell,
   Search,
   User,
   LogOut,
@@ -73,62 +72,6 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }: AdminHeader
         <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
           {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
-
-        {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                3
-              </span>
-              <span className="sr-only">Notifications</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              <span>Notifications</span>
-              <Button variant="ghost" size="sm" className="text-xs">Mark all read</Button>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <div className="max-h-80 overflow-y-auto">
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-blue-500" />
-                  <span className="font-medium">New Order #1234</span>
-                </div>
-                <p className="text-xs text-muted-foreground ml-4">
-                  Customer placed an order for 3 items totaling AED 450
-                </p>
-                <span className="text-xs text-muted-foreground ml-4">2 minutes ago</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-yellow-500" />
-                  <span className="font-medium">Low Stock Alert</span>
-                </div>
-                <p className="text-xs text-muted-foreground ml-4">
-                  Product "Paper Bag Large" is running low (5 remaining)
-                </p>
-                <span className="text-xs text-muted-foreground ml-4">1 hour ago</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
-                  <span className="font-medium">Return Request</span>
-                </div>
-                <p className="text-xs text-muted-foreground ml-4">
-                  Customer requested return for order #1201
-                </p>
-                <span className="text-xs text-muted-foreground ml-4">3 hours ago</span>
-              </DropdownMenuItem>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="justify-center cursor-pointer">
-              <Link href="/admin/notifications">View all notifications</Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         {/* User menu */}
         <DropdownMenu>

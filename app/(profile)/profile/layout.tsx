@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { 
   User, MapPin, CreditCard, Package, 
-  Settings, LogOut, ChevronRight, ShoppingBag
+  Settings, LogOut, ChevronRight, ShoppingBag, RotateCcw
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -17,6 +17,7 @@ const sidebarItems = [
   { href: '/profile/addresses', label: 'Addresses', icon: MapPin },
   { href: '/profile/wallets', label: 'Wallets', icon: CreditCard },
   { href: '/profile/orders', label: 'Orders', icon: Package },
+  { href: '/profile/returns', label: 'Returns', icon: RotateCcw },
   { href: '/profile/settings', label: 'Settings', icon: Settings },
 ]
 

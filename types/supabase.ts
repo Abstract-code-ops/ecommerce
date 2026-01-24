@@ -250,9 +250,75 @@ export interface Database {
           created_at?: string
         }
       }
+      returns: {
+        Row: {
+          id: string
+          order_id: string
+          order_item_id: string
+          user_id: string | null
+          return_number: string
+          reason: ReturnReason
+          reason_details: string | null
+          status: ReturnStatus
+          admin_notes: string | null
+          rejection_reason: string | null
+          quantity: number
+          refund_amount_cents: number | null
+          images: string[]
+          created_at: string
+          updated_at: string
+          resolved_at: string | null
+          refunded_at: string | null
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          order_item_id: string
+          user_id?: string | null
+          return_number?: string
+          reason: ReturnReason
+          reason_details?: string | null
+          status?: ReturnStatus
+          admin_notes?: string | null
+          rejection_reason?: string | null
+          quantity?: number
+          refund_amount_cents?: number | null
+          images?: string[]
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+          refunded_at?: string | null
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          order_item_id?: string
+          user_id?: string | null
+          return_number?: string
+          reason?: ReturnReason
+          reason_details?: string | null
+          status?: ReturnStatus
+          admin_notes?: string | null
+          rejection_reason?: string | null
+          quantity?: number
+          refund_amount_cents?: number | null
+          images?: string[]
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+          refunded_at?: string | null
+        }
+      }
     }
   }
 }
+
+// =============================================================================
+// RETURN TYPES
+// =============================================================================
+
+export type ReturnReason = 'damaged' | 'wrong_item' | 'not_as_described' | 'defective' | 'changed_mind' | 'other'
+export type ReturnStatus = 'pending' | 'approved' | 'rejected' | 'processing' | 'refunded'
 
 // =============================================================================
 // SNAPSHOT TYPES - For denormalized data stored at purchase time
@@ -312,6 +378,10 @@ export type OrderItemRow = Database['public']['Tables']['order_items']['Row']
 export type OrderItemInsert = Database['public']['Tables']['order_items']['Insert']
 export type OrderItemUpdate = Database['public']['Tables']['order_items']['Update']
 
+export type Return = Database['public']['Tables']['returns']['Row']
+export type ReturnInsert = Database['public']['Tables']['returns']['Insert']
+export type ReturnUpdate = Database['public']['Tables']['returns']['Update']
+
 // =============================================================================
 // EXTENDED TYPES FOR API RESPONSES
 // =============================================================================
@@ -353,6 +423,74 @@ export interface FormattedOrderItem {
   slug: string
   size?: string
   color?: string
+}
+
+// =============================================================================
+// RETURN EXTENDED TYPES
+// =============================================================================
+
+/**
+ * Return with related order and item information (from join query)
+ */
+export interface ReturnWithDetails extends Return {
+  order: Order
+  order_item: OrderItemRow
+  profile?: Profile
+}
+
+/**
+ * Formatted return for display (prices in AED, not cents)
+ */
+export interface FormattedReturn {
+  id: string
+  returnNumber: string
+  orderId: string
+  orderNumber: string
+  orderItemId: string
+  productName: string
+  productImage: string
+  quantity: number
+  reason: ReturnReason
+  reasonLabel: string
+  reasonDetails?: string
+  status: ReturnStatus
+  adminNotes?: string
+  rejectionReason?: string
+  refundAmount?: number
+  images: string[]
+  createdAt: string
+  updatedAt: string
+  resolvedAt?: string
+  refundedAt?: string
+  customer?: {
+    id: string
+    name: string
+    email: string
+    phone?: string
+  }
+}
+
+/**
+ * Reason labels for display
+ */
+export const RETURN_REASON_LABELS: Record<ReturnReason, string> = {
+  damaged: 'Damaged during shipping',
+  wrong_item: 'Wrong item received',
+  not_as_described: 'Not as described',
+  defective: 'Defective product',
+  changed_mind: 'Changed my mind',
+  other: 'Other',
+}
+
+/**
+ * Status labels for display
+ */
+export const RETURN_STATUS_LABELS: Record<ReturnStatus, string> = {
+  pending: 'Pending Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  processing: 'Processing',
+  refunded: 'Refunded',
 }
 
 // =============================================================================

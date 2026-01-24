@@ -136,8 +136,8 @@ export default function Header() {
           {/* Expandable Search Bar */}
           <div
             className={cn(
-              "overflow-hidden transition-all duration-300 ease-out",
-              searchExpanded ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
+              "transition-all duration-300 ease-out",
+              searchExpanded ? "max-h-20 opacity-100" : "max-h-0 opacity-0 overflow-hidden"
             )}
           >
             <div className="container-premium pb-4">
@@ -225,8 +225,8 @@ export default function Header() {
             {/* Mobile Search Expandable */}
             <div
               className={cn(
-                "md:hidden overflow-hidden transition-all duration-300 ease-out",
-                searchExpanded ? "max-h-20 opacity-100 pb-4" : "max-h-0 opacity-0"
+                "md:hidden transition-all duration-300 ease-out",
+                searchExpanded ? "max-h-20 opacity-100 pb-4" : "max-h-0 opacity-0 overflow-hidden"
               )}
             >
               <Search className="w-full" onSubmit={() => setSearchExpanded(false)} />
