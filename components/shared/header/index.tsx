@@ -62,7 +62,7 @@ export default function Header() {
   }, []);
 
   // Announcement bar text
-  const announcementText = "Free shipping on orders over $100 • Crafted with love";
+  const announcementText = "Free shipping on orders over AED 250 • Crafted with love";
 
   return (
     <>

@@ -887,10 +887,6 @@ const CartPage = () => {
                       {cart.shippingPrice === 0 ? "Free" : formatCurrency(cart.shippingPrice || 0)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax</span>
-                    <span className="font-medium">{formatCurrency(cart.taxPrice || 0)}</span>
-                  </div>
                 </div>
 
                 {/* Promo Code */}

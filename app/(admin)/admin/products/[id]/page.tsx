@@ -31,7 +31,7 @@ import { toast } from 'react-toastify'
 
 // Default categories and tags
 const defaultCategories = ['Paper Bags', 'Kraft Bags', 'Gift Bags', 'Eco Bags', 'Custom Bags', 'Shopping Bags', 'Food Packaging']
-const defaultTags = ['Featured', 'New Arrival', 'Best Seller', 'Sale', 'Limited Edition', 'Eco-Friendly', 'Premium']
+const defaultTags: string[] = []  // Empty - only shows existing tags from products
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)

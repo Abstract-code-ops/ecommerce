@@ -26,14 +26,14 @@ const calculateCartTotals = (items: OrderItem[]) => {
         items.reduce((acc, item) => acc + item.totalPrice, 0)
     );
     
-    // 15% shipping
-    const shippingPrice = round2Decimals(itemPrice * 0.15);
+    // Fixed shipping of 10 AED
+    const shippingPrice = 10;
     
-    // 5% tax (VAT)
-    const taxPrice = round2Decimals(itemPrice * 0.05);
+    // No tax
+    const taxPrice = 0;
     
     const totalPrice = round2Decimals(
-        shippingPrice + itemPrice + taxPrice
+        shippingPrice + itemPrice
     );
     
     const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);

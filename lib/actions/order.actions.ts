@@ -17,6 +17,11 @@ import {
 import { revalidatePath } from 'next/cache'
 import { OrderItem } from "@/types";
 import { round2Decimals } from "../utils";
+import { Resend } from 'resend';
+import { OrderConfirmationEmail } from '@/components/emails/order-confirmation-email';
+import React from 'react';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Calculate order pricing including tax and shipping
@@ -34,14 +39,14 @@ export const calculateDateAndPrice = async ({
         items.reduce((acc, item) => acc + item.totalPrice, 0)
     )
 
-    // TODO: Replace with final shipping calculation strategy
-    const shippingPrice = round2Decimals(itemPrice * 0.15);
+    // Fixed shipping price of 10 AED
+    const shippingPrice = 10;
     
-    // TODO: Replace with final tax calculation strategy (consider VAT, location-based rates)
-    const taxPrice = round2Decimals(itemPrice * 0.05);
+    // No tax
+    const taxPrice = 0;
     
     const totalPrice = round2Decimals(
-        (shippingPrice ?? 0) + itemPrice + (taxPrice ?? 0)
+        shippingPrice + itemPrice
     )
 
     return {
@@ -420,6 +425,74 @@ export async function createOrder(orderData: {
       console.error('Error reducing stock (order still created):', stockError)
       // Note: We don't rollback the order here - stock reduction is secondary
       // In a production system, you might want to queue this for retry
+    }
+
+    // Send order confirmation email
+    try {
+      // Get customer email - from user profile or guest email
+      let customerEmail: string | null = null;
+      let customerName: string = orderData.shippingAddress.fullName;
+
+      if (user) {
+        // Get user email from Supabase auth
+        customerEmail = user.email || null;
+      } else {
+        // Use guest email for non-authenticated orders
+        customerEmail = orderData.guestEmail || null;
+      }
+
+      if (customerEmail) {
+        const appName = process.env.NEXT_PUBLIC_APP_NAME || 'Global Edge';
+        
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL || `${appName} <onboarding@resend.dev>`,
+          to: customerEmail,
+          subject: `Order Confirmed - ${order.order_number} | ${appName}`,
+          react: React.createElement(OrderConfirmationEmail, {
+            customerName: customerName,
+            orderNumber: order.order_number,
+            orderDate: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            items: orderData.items.map(item => ({
+              name: item.productSnapshot.name,
+              image: item.productSnapshot.image,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.unitPrice * item.quantity,
+              size: item.size,
+              color: item.color,
+            })),
+            subtotal: orderData.subtotal,
+            shipping: orderData.shipping,
+            tax: orderData.tax,
+            discount: orderData.discount || 0,
+            total: total,
+            shippingAddress: {
+              fullName: orderData.shippingAddress.fullName,
+              street: orderData.shippingAddress.street,
+              city: orderData.shippingAddress.city,
+              emirate: orderData.shippingAddress.emirate,
+              country: orderData.shippingAddress.country,
+              phone: orderData.shippingAddress.phone,
+            },
+            paymentMethod: orderData.paymentMethod,
+          }),
+        });
+
+        if (emailError) {
+          console.error('Resend API error:', emailError);
+        } else {
+          console.log('Order confirmation email sent to:', customerEmail, 'Email ID:', emailData?.id);
+        }
+      } else {
+        console.log('No customer email available for order confirmation');
+      }
+    } catch (emailError) {
+      console.error('Error sending order confirmation email (order still created):', emailError);
+      // Note: We don't rollback the order here - email sending is secondary
     }
 
     revalidatePath('/orders')
