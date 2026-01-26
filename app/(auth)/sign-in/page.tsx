@@ -61,10 +61,17 @@ const SignInPage = () => {
     setIsGoogleLoading(true)
     try {
       const origin = process.env.NEXT_PUBLIC_WEBSITE_DOMAIN || 'http://localhost:3000'
+      const redirectUrl = `${origin}/auth/callback?redirect=${redirectTo}`
+
+      console.log('--- Google Sign In Debug ---')
+      console.log('Environment Domain:', process.env.NEXT_PUBLIC_WEBSITE_DOMAIN)
+      console.log('Window Origin (client):', typeof window !== 'undefined' ? window.location.origin : 'SSR')
+      console.log('Final Redirect URL:', redirectUrl)
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${origin}/auth/callback?redirect=${redirectTo}`,
+          redirectTo: redirectUrl,
         },
       })
 
