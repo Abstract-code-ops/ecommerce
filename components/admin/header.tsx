@@ -90,7 +90,7 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }: AdminHeader
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div className="flex flex-col">
-                <span>{user?.email || 'admin@example.com'}</span>
+                <span>{user?.email || 'support@globaledgeshop.com'}</span>
                 <span className="text-xs font-normal text-muted-foreground">Administrator</span>
               </div>
             </DropdownMenuLabel>

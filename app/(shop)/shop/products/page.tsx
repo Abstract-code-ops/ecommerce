@@ -124,12 +124,20 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   const resolvedParams = await searchParams;
   const filters = parseSearchParams(resolvedParams);
 
+  // Determine page title
+  let pageTitle = 'All Products';
+  if (filters.deals) {
+    pageTitle = 'Deals and Offers';
+  } else if (filters.category) {
+    pageTitle = filters.category;
+  }
+
   return (
     <div className="min-h-screen bg-stone-50/50">
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-stone-900 tracking-tight">All Products</h1>
+          <h1 className="text-3xl font-bold text-stone-900 tracking-tight">{pageTitle}</h1>
           <p className="mt-2 text-stone-500">
             Discover our premium collection with advanced filters to find exactly what you need.
           </p>

@@ -774,10 +774,10 @@ export default function OrdersPage() {
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium text-blue-700 dark:text-blue-300">Email:</span>
                   <a 
-                    href="mailto:support@gmqg.com" 
+                    href="mailto:support@globaledgeshop.com" 
                     className="text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    support@gmqg.com
+                    support@globaledgeshop.com
                   </a>
                 </div>
                 <p className="text-xs text-blue-500 dark:text-blue-400 mt-2">

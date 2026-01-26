@@ -105,7 +105,7 @@ export default function Contact() {
                       Our Location
                     </h4>
                     <p className="text-base text-body-color dark:text-dark-6">
-                      99 S.t Jomblo Park Pekanbaru 28292. Indonesia
+                      UAE, Sharjah, Al Majaz
                     </p>
                   </div>
                 </div>
@@ -145,7 +145,7 @@ export default function Contact() {
                       Phone Number
                     </h4>
                     <p className="text-base text-body-color dark:text-dark-6">
-                      (+62)81 414 257 9980
+                      +90 533 844 57 88
                     </p>
                   </div>
                 </div>
@@ -170,7 +170,7 @@ export default function Contact() {
                       Email Address
                     </h4>
                     <p className="text-base text-body-color dark:text-dark-6">
-                      info@yourdomain.com
+                      support@globaledgeshop.com
                     </p>
                   </div>
                 </div>

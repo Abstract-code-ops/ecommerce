@@ -317,7 +317,7 @@ export async function updateReturn(
 // ADMIN RETURN ACTIONS
 // =============================================================================
 
-const ADMIN_EMAILS = ['admin@globaledge.ae']
+const ADMIN_EMAILS = ['support@globaledgeshop.com']
 
 async function isAdminUser(): Promise<boolean> {
   const supabase = await createClient()

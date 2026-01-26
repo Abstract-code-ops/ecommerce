@@ -21,6 +21,7 @@ export default function ToastProvider() {
       draggable
       pauseOnHover
       theme="light"
+      toastClassName="mt-16" 
     />
   )
 }

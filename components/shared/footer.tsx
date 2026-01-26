@@ -142,13 +142,13 @@ const Footer = () => {
             
             {/* Contact Info */}
             <div className="pt-4 space-y-3 text-sm text-primary-foreground/70">
-              <a href="mailto:hello@globaledge.com" className="flex items-center gap-2 hover:text-primary-foreground transition-colors">
-                <Mail className="w-4 h-4" />
-                hello@globaledge.com
+              <a href="mailto:support@globaledgeshop.com" className="flex items-center gap-2 hover:text-primary-foreground transition-colors">
+                <Mail className="h-4 w-4" />
+                support@globaledgeshop.com
               </a>
-              <a href="tel:+1234567890" className="flex items-center gap-2 hover:text-primary-foreground transition-colors">
+              <a href="tel:+905338445788" className="flex items-center gap-2 hover:text-primary-foreground transition-colors">
                 <Phone className="w-4 h-4" />
-                +1 (234) 567-890
+                +90 533 844 57 88
               </a>
             </div>
           </div>

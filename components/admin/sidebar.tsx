@@ -94,14 +94,18 @@ export default function AdminSidebar({ isOpen, setIsOpen }: AdminSidebarProps) {
           "flex h-16 items-center border-b border-gray-200 dark:border-gray-700 px-4",
           !isOpen && "md:justify-center"
         )}>
-          <Link href="/admin" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white">
+          <button 
+             type="button"
+             onClick={() => setIsOpen(!isOpen)}
+             className={cn("flex items-center gap-3 w-full text-left transition-opacity hover:opacity-80", !isOpen && "justify-center")}
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white shrink-0">
               <Store className="h-5 w-5" />
             </div>
             {isOpen && (
               <span className="text-lg font-semibold whitespace-nowrap">Admin Panel</span>
             )}
-          </Link>
+          </button>
         </div>
 
         {/* Navigation */}

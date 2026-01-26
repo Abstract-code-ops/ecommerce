@@ -49,10 +49,10 @@ export default function SettingsPage() {
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
     storeName: 'Global Edge',
-    storeEmail: 'contact@globaledge.ae',
-    storePhone: '+971 4 123 4567',
-    storeAddress: 'Dubai Marina, Tower B, Suite 1201',
-    storeCity: 'Dubai',
+    storeEmail: 'support@globaledgeshop.com',
+    storePhone: '+90 533 844 57 88',
+    storeAddress: 'UAE, Sharjah, Al Majaz',
+    storeCity: 'Sharjah',
     storeCountry: 'UAE',
     currency: 'AED',
     timezone: 'Asia/Dubai',
@@ -76,7 +76,7 @@ export default function SettingsPage() {
     flatRate: 25,
     expressRate: 50,
     enableLocalPickup: true,
-    pickupAddress: 'Dubai Marina, Tower B, Suite 1201'
+    pickupAddress: 'UAE, Sharjah, Al Majaz'
   })
 
   // Notification settings state
@@ -88,7 +88,7 @@ export default function SettingsPage() {
     newCustomerAlert: true,
     dailyReportEmail: false,
     weeklyReportEmail: true,
-    adminEmail: 'admin@globaledge.ae'
+    adminEmail: 'support@globaledgeshop.com'
   })
 
   const handleSave = async () => {

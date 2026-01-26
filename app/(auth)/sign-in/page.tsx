@@ -60,10 +60,11 @@ const SignInPage = () => {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
     try {
+      const origin = process.env.NEXT_PUBLIC_WEBSITE_DOMAIN || 'http://localhost:3000'
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${redirectTo}`,
+          redirectTo: `${origin}/auth/callback?redirect=${redirectTo}`,
         },
       })
 

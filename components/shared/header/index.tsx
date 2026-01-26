@@ -304,6 +304,11 @@ export default function Header() {
 
             {/* Mobile Menu Content */}
             <div className="flex flex-col h-[calc(100%-73px)] overflow-y-auto">
+              {/* Mobile Menu Actions (User/Cart/Auth) */}
+              <div className="p-4 border-b border-border bg-muted/30">
+                <Menu layout="mobile" onNavigate={() => setMobileOpen(false)} />
+              </div>
+
               {/* Navigation Links */}
               <nav className="flex-1 p-4">
                 <div className="space-y-1">
@@ -320,11 +325,6 @@ export default function Header() {
                   ))}
                 </div>
               </nav>
-
-              {/* Mobile Menu Footer */}
-              <div className="p-4 border-t border-border bg-muted/30">
-                <Menu layout="mobile" onNavigate={() => setMobileOpen(false)} />
-              </div>
             </div>
           </div>
         </div>
