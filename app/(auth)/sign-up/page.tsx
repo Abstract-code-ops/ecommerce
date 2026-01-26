@@ -82,6 +82,7 @@ const SignUpPage = () => {
 
     setIsLoading(true)
     try {
+      const origin = process.env.NEXT_PUBLIC_WEBSITE_DOMAIN || 'http://localhost:3000'
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -89,7 +90,7 @@ const SignUpPage = () => {
           data: {
             full_name: formData.fullName,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${origin}/auth/callback`,
         },
       })
 
@@ -116,10 +117,11 @@ const SignUpPage = () => {
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true)
     try {
+      const origin = process.env.NEXT_PUBLIC_WEBSITE_DOMAIN || 'http://localhost:3000'
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${origin}/auth/callback`,
         },
       })
 
