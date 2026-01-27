@@ -3,7 +3,7 @@
 import cloudinary, { getPublicIdFromUrl } from '@/lib/cloudinary'
 import { createClient } from '@/lib/supabase/server'
 
-const ADMIN_EMAILS = ['support@globaledgeshop.com']
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'support@globaledgeshop.com').split(',').map(e => e.trim())
 
 async function isAdminUser(): Promise<boolean> {
   const supabase = await createClient()

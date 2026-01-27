@@ -4,6 +4,7 @@ import HeroCarousel from "@/components/layout/home/hero-carousel"
 import BrowsingHistoryList from "@/components/shared/browsing-history-list"
 import FadeInSection from "@/components/shared/fade-in-section"
 import { getProductByTag, getFeaturedProducts } from "@/lib/actions/product.actions"
+import { getBanners } from "@/lib/actions/banner.actions"
 import data from "@/lib/data"
 import Link from "next/link"
 import Image from "next/image"
@@ -45,17 +46,29 @@ const features = [
 
 export default async function Page() {
     // Fetch data inside the component to ensure fresh data on each request
-    const [bestSelling, todayDeals, featuredProducts] = await Promise.all([
+    const [bestSelling, todayDeals, featuredProducts, dbBanners] = await Promise.all([
         getProductByTag({tag: 'best-seller'}),
         getProductByTag({tag: 'today-deal'}),
-        getFeaturedProducts(8)
+        getFeaturedProducts(8),
+        getBanners()
     ]);
+
+    // Map DB banners to Carousel format, fallback to default data if empty
+    const carouselItems = dbBanners.length > 0 
+        ? dbBanners.map(b => ({
+            title: b.title,
+            imageUrl: b.image_url,
+            href: b.link_url || '#',
+            buttonCaption: b.button_caption,
+            isPublished: b.is_active
+        }))
+        : data.carousels;
 
     return (
         <div className="flex flex-col">
             {/* Hero Section */}
             <section className="relative">
-                <HeroCarousel items={data.carousels} />
+                <HeroCarousel items={carouselItems} />
             </section>
 
             {/* Trust Badges */}

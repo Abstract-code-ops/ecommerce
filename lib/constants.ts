@@ -8,4 +8,4 @@ export const APP_DESCRIPTION =
 export const PAGE_SIZE = Number(process.env.NEXT_PUBLIC_PAGE_SIZE) || 10;
 
 // Admin emails - users with these emails can access the admin dashboard
-export const ADMIN_EMAILS = ['support@globaledgeshop.com'];
+export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'support@globaledgeshop.com').split(',').map(email => email.trim());

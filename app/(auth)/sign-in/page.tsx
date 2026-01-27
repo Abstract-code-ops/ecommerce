@@ -6,13 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'react-toastify'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
-import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, 
-  ShoppingBag, Check, Loader2
+  Eye, EyeOff, Loader2
 } from 'lucide-react'
 
 const SignInPage = () => {
@@ -189,6 +184,7 @@ const SignInPage = () => {
             New on our platform?
             <Link href="/sign-up" className="link animate-underline link-primary font-normal ml-2">Create an account</Link>
           </p>
+          {/* 
           <div className="divider">or</div>
           <button 
             className="btn btn-text btn-block" 
@@ -219,6 +215,7 @@ const SignInPage = () => {
             )}
             Sign in with google
           </button>
+          */}
         </div>
       </div>
     </div>

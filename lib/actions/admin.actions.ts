@@ -15,7 +15,7 @@ function serialize<T>(data: T): T {
 // ADMIN AUTHENTICATION CHECK
 // =============================================================================
 
-const ADMIN_EMAILS = ['support@globaledgeshop.com']
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'support@globaledgeshop.com').split(',').map(e => e.trim())
 
 async function isAdminUser(): Promise<boolean> {
   const supabase = await createClient()
@@ -26,6 +26,10 @@ async function isAdminUser(): Promise<boolean> {
   return ADMIN_EMAILS.includes(user.email || '') ||
          user.user_metadata?.role === 'admin' ||
          user.app_metadata?.role === 'admin'
+}
+
+export async function checkAdminStatus(): Promise<boolean> {
+  return isAdminUser()
 }
 
 // =============================================================================

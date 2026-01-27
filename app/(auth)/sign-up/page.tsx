@@ -7,11 +7,9 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'react-toastify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
 import { motion } from 'framer-motion'
 import { 
-  Mail, Lock, Eye, EyeOff, ArrowRight, User,
-  ShoppingBag, Check, Loader2, Gift, Truck, Shield
+  Mail, Lock, Eye, EyeOff, ArrowRight, User, Loader2
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -161,6 +159,7 @@ const SignUpPage = () => {
           </div>
 
           {/* Google Sign Up */}
+          {/* 
           <Button
             type="button"
             variant="outline"
@@ -201,6 +200,7 @@ const SignUpPage = () => {
               or continue with email
             </span>
           </div>
+          */}
 
           {/* Registration Form */}
           <form onSubmit={handleSignUp} className="space-y-4">

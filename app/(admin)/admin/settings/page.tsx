@@ -27,13 +27,16 @@ import {
   Palette,
   Receipt,
   MailOpen,
-  Settings2
+  Settings2,
+  Image as ImageIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import BannersTab from './banners-tab'
 
 // Settings navigation
 const settingsSections = [
   { id: 'general', name: 'General', icon: Store, description: 'Store name, contact info, address' },
+  { id: 'banners', name: 'Storefront', icon: ImageIcon, description: 'Manage home page banners' },
   { id: 'payments', name: 'Payments', icon: CreditCard, description: 'Payment methods and gateways' },
   { id: 'shipping', name: 'Shipping', icon: Truck, description: 'Shipping zones and rates' },
   { id: 'notifications', name: 'Notifications', icon: Bell, description: 'Email and push notifications' },
@@ -162,6 +165,9 @@ export default function SettingsPage() {
 
         {/* Settings Content */}
         <div className="lg:col-span-3 space-y-6">
+          {/* Banners Settings */}
+          {activeSection === 'banners' && <BannersTab />}
+          
           {/* General Settings */}
           {activeSection === 'general' && (
             <>

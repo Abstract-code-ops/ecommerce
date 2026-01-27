@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { useRouter } from 'next/navigation'
 import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { ADMIN_EMAILS } from '@/lib/constants'
+import { checkAdminStatus } from '@/lib/actions/admin.actions'
 
 type AuthContextType = {
   user: User | null
@@ -26,11 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
   const supabase = createClient()
   const router = useRouter()
-
-  // Check if current user is an admin
-  const isAdmin = user ? ADMIN_EMAILS.includes(user.email || '') : false
 
   useEffect(() => {
     // Get initial session
@@ -38,6 +36,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession()
       setSession(session)
       setUser(session?.user ?? null)
+      
+      if (session?.user) {
+         checkAdminStatus().then(setIsAdmin)
+      } else {
+         setIsAdmin(false)
+      }
+
       setIsLoading(false)
     }
 
@@ -48,6 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (_event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          checkAdminStatus().then(setIsAdmin)
+        } else {
+          setIsAdmin(false)
+        }
+        
         setIsLoading(false)
       }
     )
