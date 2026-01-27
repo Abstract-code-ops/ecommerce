@@ -39,15 +39,15 @@ const SignInPage = () => {
 
       if (error) {
         toast.error(error.message)
+        setIsLoading(false)
         return
       }
 
       toast.success('Welcome back!')
-      router.push(redirectTo)
       router.refresh()
+      router.push(redirectTo)
     } catch (error) {
       toast.error('An unexpected error occurred')
-    } finally {
       setIsLoading(false)
     }
   }
@@ -72,10 +72,10 @@ const SignInPage = () => {
 
       if (error) {
         toast.error(error.message)
+        setIsGoogleLoading(false)
       }
     } catch (error) {
       toast.error('An unexpected error occurred')
-    } finally {
       setIsGoogleLoading(false)
     }
   }
