@@ -1,11 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '5mb',
-    },
-  },
   images: {
     remotePatterns: [
       {
@@ -40,6 +35,9 @@ const nextConfig: NextConfig = {
   // Optimize package imports
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion', '@radix-ui/react-accordion', '@radix-ui/react-dropdown-menu'],
+    serverActions: {
+      bodySizeLimit: '5mb',
+    },
   },
 };
 
