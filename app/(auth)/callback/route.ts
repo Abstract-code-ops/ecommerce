@@ -16,10 +16,15 @@ export async function GET(request: Request) {
     await supabase.auth.exchangeCodeForSession(code)
   }
 
-  // 🔒 Railway-safe origin (do NOT use request.url)
-  const origin =
-    process.env.NEXT_PUBLIC_WEBSITE_DOMAIN ??
-    'https://globaledgeshop.com'
+  let origin = new URL(request.url).origin
+
+  // 🔒 Railway safety: never allow localhost in production redirects
+  if (
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1')
+  ) {
+    origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://globaledgeshop.com'
+  }
 
   return NextResponse.redirect(`${origin}${redirect}`)
 }
