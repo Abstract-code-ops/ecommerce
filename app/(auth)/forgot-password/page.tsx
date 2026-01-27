@@ -24,17 +24,19 @@ export default function ForgotPasswordPage() {
     try {
       const getURL = () => {
         let url =
-          process.env.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in production env.
+          process.env.NEXT_PUBLIC_WEBSITE_DOMAIN ?? // Set this to your site URL in production env.
           process.env.NEXT_PUBLIC_VERCEL_URL ?? // Automatically set by Vercel.
           'http://localhost:3000/' // Fallback to localhost for development.
+        console.log('Original URL for password reset:', url)
         url = url.startsWith('http') ? url : `https://${url}`
         // Make sure to include a trailing `/`.
         url = url.endsWith('/') ? url : `${url}/`
         console.log('Redirect URL for password reset:', url)
         return url
       }
+      console.log('Using redirect URL:', `${getURL()}auth/callback?redirect=/reset-password`)
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${getURL()}auth/callback?next=/reset-password`,
+        redirectTo: `${getURL()}auth/callback?redirect=/reset-password`,
       })
 
       if (error) {
