@@ -16,13 +16,11 @@ export async function GET(request: Request) {
     await supabase.auth.exchangeCodeForSession(code)
   }
 
-  // 🔧 FIX: Use forwarded headers instead of request.origin
-  const forwardedProto = request.headers.get('x-forwarded-proto')
-  const forwardedHost = request.headers.get('x-forwarded-host')
-
-  const origin = forwardedProto && forwardedHost
-    ? `${forwardedProto}://${forwardedHost}`
-    : new URL(request.url).origin
+  // 🔒 Railway-safe origin (do NOT use request.url)
+  const origin =
+    process.env.NEXT_PUBLIC_WEBSITE_DOMAIN ??
+    'https://globaledgeshop.com'
 
   return NextResponse.redirect(`${origin}${redirect}`)
 }
+

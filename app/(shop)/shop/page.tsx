@@ -247,13 +247,13 @@ export default async function Page() {
                                 unboxing moment special. Each product is designed with both aesthetics 
                                 and environmental responsibility in mind.
                             </p>
-                            <Link 
+                            {/* <Link 
                                 href="/about" 
                                 className="inline-flex items-center gap-2 bg-white text-primary px-6 py-3 rounded-lg font-medium hover:bg-white/90 transition-colors duration-200"
                             >
                                 <span>Learn More</span>
                                 <ArrowRight className="w-4 h-4" />
-                            </Link>
+                            </Link> */}
                         </FadeInSection>
                         <FadeInSection direction="left" delay={200} className="order-1 lg:order-2 relative aspect-square max-w-md mx-auto lg:max-w-none w-full">
                             <div className="absolute inset-4 md:inset-8 rounded-2xl overflow-hidden bg-muted">
