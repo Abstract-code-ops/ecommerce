@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     origin.includes('localhost') ||
     origin.includes('127.0.0.1')
   ) {
-    origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://globaledgeshop.com'
+    origin = process.env.NEXT_PUBLIC_WEBSITE_DOMAIN ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'https://globaledgeshop.com'
   }
 
   return NextResponse.redirect(`${origin}${redirect}`)
