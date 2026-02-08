@@ -193,7 +193,7 @@ export default async function Page() {
                     </FadeInSection>
                     <FadeInSection delay={100}>
                     <ProductSlider 
-                        products={todayDeals} 
+                        products={featuredProducts} 
                         showBottom
                     />
                     </FadeInSection>
