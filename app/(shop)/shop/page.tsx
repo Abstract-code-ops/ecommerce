@@ -49,7 +49,7 @@ export default async function Page() {
     const [bestSelling, todayDeals, featuredProducts, dbBanners] = await Promise.all([
         getProductByTag({tag: 'best-seller'}),
         getProductByTag({tag: 'today-deal'}),
-        getFeaturedProducts(8),
+        getProductByTag({tag: 'new-arrival'}),
         getBanners()
     ]);
 
