@@ -36,7 +36,6 @@ const categories = [
     },
 ]
 
-// Trust badges/features
 const features = [
     { icon: Leaf, title: "Eco-Friendly", description: "Sustainable materials" },
     { icon: Truck, title: "Free Shipping", description: "On orders over $100" },
@@ -45,15 +44,13 @@ const features = [
 ]
 
 export default async function Page() {
-    // Fetch data inside the component to ensure fresh data on each request
-    const [bestSelling, todayDeals, featuredProducts, dbBanners] = await Promise.all([
+    const [bestSelling, featuredProducts, newArrivals, dbBanners] = await Promise.all([
         getProductByTag({tag: 'best-seller'}),
-        getProductByTag({tag: 'today-deal'}),
+        getFeaturedProducts(),
         getProductByTag({tag: 'new-arrival'}),
         getBanners()
     ]);
 
-    // Map DB banners to Carousel format, fallback to default data if empty
     const carouselItems = dbBanners.length > 0 
         ? dbBanners.map(b => ({
             title: b.title,
@@ -81,7 +78,7 @@ export default async function Page() {
                                 key={feature.title} 
                                 className="flex items-center gap-3 md:gap-4"
                             >
-                                <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                <div className="shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/10 flex items-center justify-center">
                                     <feature.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                                 </div>
                                 <div>
@@ -124,7 +121,7 @@ export default async function Page() {
                             <Link 
                                 key={cat.name} 
                                 href={cat.href}
-                                className="group relative overflow-hidden rounded-xl aspect-[4/5] md:aspect-[3/4]"
+                                className="group relative overflow-hidden rounded-xl aspect-4/5 md:aspect-3/4"
                             >
                                 {/* Background Image */}
                                 <div className="absolute inset-0">
@@ -139,12 +136,12 @@ export default async function Page() {
                                         unoptimized
                                     />
                                     {/* Gradient Overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                                    <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
                                 </div>
 
                                 {/* Content */}
                                 <div className="relative h-full flex flex-col justify-end p-6 md:p-8">
-                                    <div className="transform transition-all duration-500 group-hover:translate-y-[-8px]">
+                                    <div className="transform transition-all duration-500 group-hover:translate-y-2">
                                         <h3 className="font-serif text-2xl md:text-3xl text-white mb-2">
                                             {cat.name}
                                         </h3>
@@ -193,7 +190,7 @@ export default async function Page() {
                     </FadeInSection>
                     <FadeInSection delay={100}>
                     <ProductSlider 
-                        products={featuredProducts} 
+                        products={newArrivals} 
                         showBottom
                     />
                     </FadeInSection>
