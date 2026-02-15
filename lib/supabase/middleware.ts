@@ -31,9 +31,20 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    
+    // Only set user if we successfully got user data
+    if (!error && data?.user) {
+      user = data.user
+    }
+  } catch (error) {
+    // Gracefully handle authentication errors (e.g., invalid/missing refresh tokens)
+    // This is expected for guest users and shouldn't break the app
+    console.debug('Auth token validation skipped:', error)
+  }
 
   // Protected routes - redirect to sign-in if not authenticated
   const protectedPaths = ['/profile', '/orders']
