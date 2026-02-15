@@ -75,10 +75,10 @@ export async function getFilterOptions(): Promise<FilterOptions> {
         maxHeight: { $max: '$dimensions.height' },
         minDepth: { $min: '$dimensions.depth' },
         maxDepth: { $max: '$dimensions.depth' },
-        minReviews: { $min: '$numReviews' },
-        maxReviews: { $max: '$numReviews' },
-        minRating: { $min: '$avgRating' },
-        maxRating: { $max: '$avgRating' },
+        minReviews: { $min: '$reviewStats.count' },
+        maxReviews: { $max: '$reviewStats.count' },
+        minRating: { $min: '$reviewStats.average' },
+        maxRating: { $max: '$reviewStats.average' },
       },
     },
   ]);
@@ -183,15 +183,23 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
   }
 
   if (minReviews !== undefined || maxReviews !== undefined) {
-    conditions.numReviews = {};
-    if (minReviews !== undefined) (conditions.numReviews as Record<string, number>).$gte = minReviews;
-    if (maxReviews !== undefined) (conditions.numReviews as Record<string, number>).$lte = maxReviews;
+    conditions['reviewStats.count'] = {};
+    if (minReviews !== undefined) {
+      (conditions['reviewStats.count'] as Record<string, number>).$gte = minReviews;
+    }
+    if (maxReviews !== undefined) {
+      (conditions['reviewStats.count'] as Record<string, number>).$lte = maxReviews;
+    }
   }
 
   if (minRating !== undefined || maxRating !== undefined) {
-    conditions.avgRating = {};
-    if (minRating !== undefined) (conditions.avgRating as Record<string, number>).$gte = minRating;
-    if (maxRating !== undefined) (conditions.avgRating as Record<string, number>).$lte = maxRating;
+    conditions['reviewStats.average'] = {};
+    if (minRating !== undefined) {
+      (conditions['reviewStats.average'] as Record<string, number>).$gte = minRating;
+    }
+    if (maxRating !== undefined) {
+      (conditions['reviewStats.average'] as Record<string, number>).$lte = maxRating;
+    }
   }
 
   if (deals) {
@@ -217,10 +225,10 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
       sortOptions = { price: -1 };
       break;
     case 'rating':
-      sortOptions = { avgRating: -1 };
+      sortOptions = { 'reviewStats.average': -1 };
       break;
     case 'reviews':
-      sortOptions = { numReviews: -1 };
+      sortOptions = { 'reviewStats.count': -1 };
       break;
     case 'newest':
     default:
@@ -239,8 +247,7 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
     price: 1,
     listPrice: 1,
     images: { $slice: 2 },
-    avgRating: 1,
-    numReviews: 1,
+    reviewStats: 1,
     countInStock: 1,
     category: 1,
     dimensions: 1,
@@ -256,8 +263,18 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
     Product.countDocuments(conditions),
   ]);
 
+  // Ensure all products have default reviewStats if missing
+  const productsWithStats = products.map(product => ({
+    ...product,
+    reviewStats: product.reviewStats || {
+      average: 0,
+      count: 0,
+      distribution: [0, 0, 0, 0, 0]
+    }
+  }));
+
   return {
-    products: JSON.parse(JSON.stringify(products)) as IProduct[],
+    products: JSON.parse(JSON.stringify(productsWithStats)) as IProduct[],
     totalCount,
     totalPages: Math.ceil(totalCount / limit),
   };

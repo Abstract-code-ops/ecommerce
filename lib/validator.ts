@@ -42,6 +42,18 @@ export const ProductInputSchema = z.object({
             count: z.coerce.number().int().nonnegative(),
         })).max(5, "Rating Distribution can have at most 5 entries").optional(),
     reviews: z.array(z.string()).default([]),
+    // Cached review stats from Supabase
+    reviewStats: z.object({
+        average: z.number().min(0).max(5),
+        count: z.number().int().nonnegative(),
+        distribution: z.tuple([
+            z.number().int().nonnegative(),
+            z.number().int().nonnegative(),
+            z.number().int().nonnegative(),
+            z.number().int().nonnegative(),
+            z.number().int().nonnegative(),
+        ])
+    }).optional(),
     numSales: z.coerce.number().int().nonnegative("Number of Sales cannot be negative").optional(),
 })
 
@@ -60,6 +72,16 @@ export const OrderItemSchema = z.object({
     color: z.string().optional(),
 });
 
+export const ShippingAddressSchema = z.object({
+    fullName: z.string().min(1, "Full name is required"),
+    street: z.string().min(1, "Street address is required"),
+    city: z.string().min(1, "City is required"),
+    emirate: z.string().min(1, "Emirate is required"),
+    country: z.string().min(1, "Country is required"),
+    lat: z.number().optional(),
+    lng: z.number().optional(),
+});
+
 export const CartSchema = z.object({
     clientId: z.string().min(1, "Client ID is required"),
     items: z.array(OrderItemSchema).default([]),
@@ -71,14 +93,5 @@ export const CartSchema = z.object({
     paymentMethod: z.string().optional(),
     deliveryDateIndex: z.coerce.number().int().nonnegative("Delivery Date Index cannot be negative").optional(),
     expectedDeliveryDate: z.coerce.date().optional(),
-});
-
-export const ShippingAddressSchema = z.object({
-    fullName: z.string().min(1, "Full name is required"),
-    street: z.string().min(1, "Street address is required"),
-    city: z.string().min(1, "City is required"),
-    emirate: z.string().min(1, "Emirate is required"),
-    country: z.string().min(1, "Country is required"),
-    lat: z.number().optional(),
-    lng: z.number().optional(),
+    shippingAddress: ShippingAddressSchema.optional(),
 });

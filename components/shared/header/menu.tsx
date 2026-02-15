@@ -89,7 +89,7 @@ export default function Menu({ layout = "desktop", onNavigate }: MenuProps) {
                   <p className="font-medium text-foreground truncate">
                     {user.user_metadata?.full_name || 'Welcome back'}
                   </p>
-                  <p className="text-sm text-muted-foreground truncate">
+                  <p className="text-sm text-muted-foreground truncate break-all">
                     {user.email}
                   </p>
                 </div>

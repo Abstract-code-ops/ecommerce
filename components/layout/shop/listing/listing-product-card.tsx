@@ -61,47 +61,49 @@ export default function ListingProductCard({ product, className }: ListingProduc
     >
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden bg-stone-100">
-        <Link href={`/shop/products/${product.slug}`} className="block h-full w-full">
+        <Link href={`/shop/products/${product.slug}`} className="block h-full w-full relative z-0">
           <Image
             src={product.images[0]}
             alt={product.name}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            unoptimized
           />
         </Link>
 
         {/* Discount Badge */}
         {hasDiscount && (
-          <span className="absolute top-3 left-3 z-10 rounded-md bg-red-500 px-2 py-1 text-xs font-bold text-white shadow-sm">
+          <span className="absolute top-3 left-3 z-10 rounded-md bg-red-500 px-2 py-1 text-xs font-bold text-white shadow-sm pointer-events-none">
             -{discountPercent}%
           </span>
         )}
 
         {/* Quick Add Overlay */}
-        <div className="absolute inset-0 flex items-end justify-center bg-linear-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pb-4">
-          <AddToCartButton
-            className="scale-90 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100 px-4 py-2 text-xs"
-            price={product.price}
-            quantity={1}
-            text="Quick Add"
-            successText="Added!"
-            cartColor="text-white"
-            itemColor="bg-yellow-400"
-            buttonColor="bg-primary/95 hover:bg-primary backdrop-blur-sm"
-            textColor="text-white"
-            showPrice={false}
-            product={{
-              _id: product._id?.toString() || '',
-              name: product.name,
-              slug: product.slug,
-              category: product.category,
-              images: product.images,
-              price: product.price,
-              countInStock: product.countInStock || 0,
-            }}
-          />
+        <div className="absolute inset-0 flex items-end justify-center bg-linear-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 pb-4 pointer-events-none">
+          <div className="pointer-events-auto">
+            <AddToCartButton
+              className="scale-90 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100 px-4 py-2 text-xs"
+              price={product.price}
+              quantity={1}
+              text="Quick Add"
+              successText="Added!"
+              cartColor="text-white"
+              itemColor="bg-yellow-400"
+              buttonColor="bg-primary/95 hover:bg-primary backdrop-blur-sm"
+              textColor="text-white"
+              showPrice={false}
+              product={{
+                _id: product._id?.toString() || '',
+                name: product.name,
+                slug: product.slug,
+                category: product.category,
+                images: product.images,
+                price: product.price,
+                countInStock: product.countInStock || 0,
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -123,7 +125,7 @@ export default function ListingProductCard({ product, className }: ListingProduc
 
         {/* Rating */}
         <div className="mt-2">
-          <Rating rating={product.avgRating || 0} numReviews={product.numReviews || 0} />
+          <Rating rating={product.reviewStats?.average || 0} numReviews={product.reviewStats?.count || 0} />
         </div>
 
         {/* Price Section */}

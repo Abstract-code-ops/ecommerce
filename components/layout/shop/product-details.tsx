@@ -4,6 +4,7 @@ import { Star, Minus, Plus, Truck, Shield, RefreshCcw, Heart, Share2, Check, Cop
 import { IProduct } from '@/lib/db/models/product.model';
 import { formatCurrency } from '@/lib/utils';
 import AddToCartButton from './addToCart';
+import type { ReviewStats } from '@/lib/actions/review.actions';
 import {
   Accordion,
   AccordionContent,
@@ -12,17 +13,18 @@ import {
 } from "@/components/ui/accordion"
 import { cn } from '@/lib/utils';
 import useWishlistStore from '@/lib/hooks/useWishlistStore';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 type ProductDetailsProps = {
     product: IProduct;
+    reviewStats?: ReviewStats;
 };
 
 const ProductDetailsInfo = (props: ProductDetailsProps) => {
   const [quantity, setQuantity] = useState(1);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const { product } = props;
+  const { product, reviewStats } = props;
 
   // Wishlist
   const { toggleItem, isInWishlist } = useWishlistStore();
@@ -162,7 +164,7 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
                   key={i} 
                   className={cn(
                     "w-4 h-4",
-                    i < Math.floor(product.avgRating || 0)
+                    i < Math.floor(reviewStats?.average || 0)
                       ? "fill-amber-400 text-amber-400"
                       : "text-border fill-transparent"
                   )}
@@ -170,7 +172,7 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
               ))}
             </div>
             <span className="text-sm text-muted-foreground">
-              ({product.numReviews || 0} reviews)
+              ({reviewStats?.count || 0} reviews)
             </span>
           </div>
           

@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import Image from 'next/image'
 import { Loader2, ArrowLeft } from 'lucide-react'
 

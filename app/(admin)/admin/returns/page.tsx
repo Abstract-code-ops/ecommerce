@@ -47,7 +47,7 @@ import {
   completeRefund,
 } from '@/lib/actions/return.actions'
 import { FormattedReturn, ReturnStatus, ReturnReason, RETURN_REASON_LABELS } from '@/types/supabase'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 const statuses: (ReturnStatus | 'all')[] = ['all', 'pending', 'approved', 'processing', 'refunded', 'rejected']
 const reasons: (ReturnReason | 'all')[] = ['all', 'damaged', 'wrong_item', 'not_as_described', 'defective', 'changed_mind', 'other']
@@ -421,7 +421,8 @@ export default function ReturnsPage() {
                                 alt={ret.productName}
                                 fill
                                 className="object-cover"
-                                unoptimized
+                                loading="lazy"
+                                sizes="40px"
                               />
                             </div>
                             <div>
@@ -584,7 +585,8 @@ export default function ReturnsPage() {
                       alt={selectedReturn.productName}
                       fill
                       className="object-cover"
-                      unoptimized
+                      loading="lazy"
+                      sizes="64px"
                     />
                   </div>
                   <div>
@@ -620,7 +622,8 @@ export default function ReturnsPage() {
                           alt={`Evidence ${i + 1}`}
                           fill
                           className="object-cover"
-                          unoptimized
+                          loading="lazy"
+                          sizes="(max-width: 640px) 33vw, 150px"
                         />
                       </div>
                     ))}

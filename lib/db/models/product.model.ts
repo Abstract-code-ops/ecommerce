@@ -39,6 +39,11 @@ const productSchema = new Schema<IProduct>({
             type: Schema.Types.ObjectId, ref: "Review", default: []
         }
     ],
+    // Cached review stats from Supabase (performance optimization)
+    reviewStats: {
+        type: Schema.Types.Mixed,
+        default: { average: 0, count: 0, distribution: [0, 0, 0, 0, 0] }
+    },
     numSales: { type: Number, default: 0 },
 }, {
     timestamps: true

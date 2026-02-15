@@ -142,8 +142,16 @@ CREATE POLICY "Users can delete own wallets" ON public.wallets
 -- ORDERS
 CREATE POLICY "Users can view own orders" ON public.orders
   FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own orders" ON public.orders
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Allow both authenticated users and guests to create orders
+CREATE POLICY "Allow order creation for authenticated users and guests" ON public.orders
+  FOR INSERT WITH CHECK (
+    -- Case 1: Authenticated user creating order (user_id must match)
+    (auth.uid() IS NOT NULL AND auth.uid() = user_id)
+    OR
+    -- Case 2: Guest creating order (no auth, user_id is null, must have guest_email)
+    (auth.uid() IS NULL AND user_id IS NULL AND guest_email IS NOT NULL)
+  );
 
 -- ORDER ITEMS (access via order ownership)
 CREATE POLICY "Users can view own order items" ON public.order_items
@@ -155,12 +163,18 @@ CREATE POLICY "Users can view own order items" ON public.order_items
     )
   );
 
-CREATE POLICY "Users can insert own order items" ON public.order_items
+CREATE POLICY "Allow order items for authenticated users and guests" ON public.order_items
   FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.orders 
-      WHERE orders.id = order_id 
-      AND orders.user_id = auth.uid()
+      WHERE orders.id = order_items.order_id 
+      AND (
+        -- Case 1: Order belongs to authenticated user
+        orders.user_id = auth.uid()
+        OR
+        -- Case 2: Guest order (user_id is null, has guest_email)
+        (orders.user_id IS NULL AND orders.guest_email IS NOT NULL)
+      )
     )
   );
 

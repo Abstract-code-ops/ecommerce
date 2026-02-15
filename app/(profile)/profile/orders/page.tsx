@@ -15,7 +15,7 @@ import {
 import { getOrders, cancelOrder } from '@/lib/actions/order.actions'
 import { createReturn, getReturns } from '@/lib/actions/return.actions'
 import { FormattedOrder, ShippingAddressSnapshot, ReturnReason, RETURN_REASON_LABELS } from '@/types/supabase'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
 
@@ -360,7 +360,8 @@ export default function OrdersPage() {
                               alt=""
                               fill
                               className="object-cover"
-                              unoptimized
+                              loading="lazy"
+                              sizes="56px"
                             />
                           </div>
                           {order.items.length > 1 && (
@@ -471,7 +472,8 @@ export default function OrdersPage() {
                                     alt={item.name}
                                     fill
                                     className="object-cover"
-                                    unoptimized
+                                    loading="lazy"
+                                    sizes="56px"
                                   />
                                 </Link>
                                 <div className="flex-1 min-w-0">
@@ -658,7 +660,8 @@ export default function OrdersPage() {
                     alt={selectedItemForReturn.name}
                     fill
                     className="object-cover"
-                    unoptimized
+                    loading="lazy"
+                    sizes="64px"
                   />
                 </div>
                 <div>

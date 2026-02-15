@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { getReturns } from '@/lib/actions/return.actions'
 import { FormattedReturn, ReturnStatus, RETURN_STATUS_LABELS } from '@/types/supabase'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 const statusConfig: Record<ReturnStatus, { 
   label: string
@@ -225,7 +225,8 @@ export default function ReturnsPage() {
                               alt={ret.productName}
                               fill
                               className="object-cover"
-                              unoptimized
+                              loading="lazy"
+                              sizes="64px"
                             />
                           </div>
                         </div>
@@ -370,7 +371,8 @@ export default function ReturnsPage() {
                                       alt={`Evidence ${i + 1}`}
                                       fill
                                       className="object-cover"
-                                      unoptimized
+                                      loading="lazy"
+                                      sizes="80px"
                                     />
                                   </div>
                                 ))}

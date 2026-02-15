@@ -4,12 +4,12 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { motion } from 'framer-motion'
 import { 
-  Mail, Lock, Eye, EyeOff, ArrowRight, User, Loader2
+  Mail, Lock, Eye, EyeOff, ArrowRight, User, Loader2, ArrowLeft
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -136,7 +136,14 @@ const SignUpPage = () => {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Sign Up Form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-background">
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-background relative">
+        <Link
+          href="/shop"
+          className="absolute left-6 top-6 inline-flex items-center gap-2 px-3 py-1.5 bg-card/95 border border-border rounded-md shadow-sm transition-transform duration-200 hover:translate-x-0.5 hover:bg-primary hover:text-primary-foreground"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" />
+          <span className="text-sm font-medium">Back to Shop</span>
+        </Link>
         <motion.div 
           className="w-full max-w-md"
           initial={{ opacity: 0, y: 20 }}

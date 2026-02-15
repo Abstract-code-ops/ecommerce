@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { 
   User, Mail, Phone, Calendar, Edit3, Save, X, 

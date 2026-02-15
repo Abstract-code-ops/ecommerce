@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,7 +26,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { createProduct, getAdminProducts } from '@/lib/actions/admin.actions'
 import { uploadMultipleToCloudinary } from '@/lib/actions/upload.actions'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 // Default categories - can be extended
 const defaultCategories = ['Paper Bags', 'Kraft Bags', 'Gift Bags', 'Eco Bags', 'Custom Bags', 'Shopping Bags', 'Food Packaging']
@@ -363,10 +364,11 @@ export default function NewProductPage() {
                       key={index} 
                       className="aspect-square rounded-lg border bg-gray-50 dark:bg-gray-800 overflow-hidden relative group"
                     >
-                      <img 
+                      <Image 
                         src={image} 
                         alt={`Product ${index + 1}`}
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                       {index === 0 && (
                         <span className="absolute top-2 left-2 px-2 py-1 bg-primary text-primary-foreground text-xs rounded">

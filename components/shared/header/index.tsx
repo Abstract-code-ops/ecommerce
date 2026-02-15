@@ -70,7 +70,7 @@ export default function Header() {
       <div
         aria-hidden={!showSticky}
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
+          "fixed top-0 left-0 right-0 z-40 transition-all duration-500",
           showSticky
             ? "pointer-events-auto opacity-100 translate-y-0"
             : "pointer-events-none opacity-0 -translate-y-full"
@@ -255,7 +255,7 @@ export default function Header() {
         <div
           aria-hidden={!mobileOpen}
           className={cn(
-            "md:hidden fixed inset-0 z-50 transition-all duration-300",
+            "md:hidden fixed inset-0 z-40 transition-all duration-300",
             mobileOpen
               ? "pointer-events-auto"
               : "pointer-events-none"

@@ -6,7 +6,7 @@ import { Heart, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react'
 import useWishlistStore, { WishlistItem } from '@/lib/hooks/useWishlistStore'
 import useCartStore from '@/lib/hooks/useCartStore'
 import { formatCurrency } from '@/lib/utils'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 export default function WishlistPage() {
   const { items, removeItem, clearWishlist } = useWishlistStore()
@@ -93,8 +93,8 @@ export default function WishlistPage() {
                 alt={item.name}
                 fill
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                unoptimized
               />
               
               {/* Remove button */}

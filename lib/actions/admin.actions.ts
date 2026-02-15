@@ -15,7 +15,11 @@ function serialize<T>(data: T): T {
 // ADMIN AUTHENTICATION CHECK
 // =============================================================================
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'support@globaledgeshop.com').split(',').map(e => e.trim())
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(',').map(e => e.trim())
+
+if (!ADMIN_EMAILS.length) {
+  console.error('CRITICAL: ADMIN_EMAILS not configured!')
+}
 
 async function isAdminUser(): Promise<boolean> {
   const supabase = await createClient()
@@ -31,10 +35,6 @@ async function isAdminUser(): Promise<boolean> {
 export async function checkAdminStatus(): Promise<boolean> {
   return isAdminUser()
 }
-
-// =============================================================================
-// DASHBOARD STATS
-// =============================================================================
 
 export async function getAdminDashboardStats() {
   try {
@@ -133,7 +133,7 @@ export async function getAdminDashboardStats() {
           total: (o.total_cents || 0) / 100,
           status: o.status,
           createdAt: o.created_at,
-          customerName: (o.shipping_address as any)?.full_name || 'Guest',
+          customerName: (o.shipping_address as any)?.fullName || 'Guest',
         })) || [],
         lowStockItems: lowStockItems.map(item => ({
           _id: item._id.toString(),
@@ -150,10 +150,6 @@ export async function getAdminDashboardStats() {
     return { success: false, error: 'Failed to fetch dashboard stats' }
   }
 }
-
-// =============================================================================
-// PRODUCTS MANAGEMENT
-// =============================================================================
 
 export async function getAdminProducts(options?: {
   search?: string
@@ -360,10 +356,6 @@ export async function createProduct(data: Partial<IProduct>) {
   }
 }
 
-// =============================================================================
-// ORDERS MANAGEMENT
-// =============================================================================
-
 export async function getAdminOrders(options?: {
   search?: string
   status?: string
@@ -435,18 +427,16 @@ export async function getAdminOrders(options?: {
       const profile = order.user_id ? profilesMap[order.user_id] : null
       const authUser = order.user_id ? usersMap[order.user_id] : null
       
-      // Priority: profile name > shipping address name > Guest
+      // Priority: profile name > shipping address name (camelCase: fullName) > Guest
       const customerName = profile?.full_name || 
-                          (order.shipping_address as any)?.full_name || 
+                          (order.shipping_address as any)?.fullName || 
                           'Guest'
       
       // Priority: auth user email > guest_email > N/A
       const customerEmail = authUser?.email || order.guest_email || 'N/A'
       
-      // Priority: profile phone > shipping address phone > N/A  
-      const customerPhone = profile?.phone ||
-                           (order.shipping_address as any)?.phone || 
-                           'N/A'
+      // Priority: profile phone > N/A (shipping address doesn't have phone)
+      const customerPhone = profile?.phone || 'N/A'
 
       return {
         id: order.id,
@@ -542,11 +532,9 @@ export async function getAdminOrderById(orderId: string) {
 
     // Compute display values
     const customerName = customerProfile?.full_name || 
-                        (order.shipping_address as any)?.full_name || 
+                        (order.shipping_address as any)?.fullName || 
                         'Guest'
-    const customerPhone = customerProfile?.phone || 
-                         (order.shipping_address as any)?.phone || 
-                         null
+    const customerPhone = customerProfile?.phone || null
 
     return {
       success: true,
@@ -614,6 +602,15 @@ export async function updateOrderStatus(orderId: string, status: string) {
       .eq('id', orderId)
 
     if (error) throw error
+
+    // Send status update email to customer
+    try {
+      const { sendOrderUpdateEmail } = await import('./order.actions')
+      await sendOrderUpdateEmail(orderId, 'status_update', { newStatus: status })
+    } catch (emailError) {
+      console.error('Error sending status update email (order still updated):', emailError)
+      // Note: Order status is still updated, email sending is secondary
+    }
 
     revalidatePath('/admin/orders')
     revalidatePath(`/admin/orders/${orderId}`)
@@ -703,9 +700,6 @@ export async function updatePaymentStatus(orderId: string, paymentStatus: string
   }
 }
 
-// =============================================================================
-// CUSTOMERS MANAGEMENT
-// =============================================================================
 
 export async function getAdminCustomers(options?: {
   search?: string
@@ -952,5 +946,302 @@ export async function getAdminAnalytics(period: 'week' | 'month' | 'year' = 'mon
   } catch (error) {
     console.error('Error fetching analytics:', error)
     return { success: false, error: 'Failed to fetch analytics' }
+  }
+}
+
+// =============================================================================
+// REVIEWS MANAGEMENT
+// =============================================================================
+
+export async function getAdminReviews(options?: {
+  search?: string
+  rating?: number
+  hasReply?: boolean
+  limit?: number
+  page?: number
+}) {
+  try {
+    const isAdmin = await isAdminUser()
+    if (!isAdmin) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const supabase = createAdminClient()
+    const limit = options?.limit || 20
+    const page = options?.page || 1
+    const offset = (page - 1) * limit
+
+    let query = supabase
+      .from('reviews')
+      .select(`
+        *,
+        profiles!reviews_user_id_fkey(full_name)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    // Apply filters
+    if (options?.rating) {
+      query = query.eq('rating', options.rating)
+    }
+
+    if (options?.hasReply !== undefined) {
+      if (options.hasReply) {
+        query = query.not('admin_reply', 'is', null)
+      } else {
+        query = query.is('admin_reply', null)
+      }
+    }
+
+    if (options?.search) {
+      query = query.or(`comment.ilike.%${options.search}%,title.ilike.%${options.search}%`)
+    }
+
+    const { data, error, count } = await query
+
+    if (error) throw error
+
+    // Get product details from MongoDB
+    await connectToDB()
+    const productIds = [...new Set(data?.map(r => r.product_id) || [])]
+    const products = await Product.find({ _id: { $in: productIds } })
+      .select('_id name slug images')
+      .lean()
+
+    const productMap = new Map(
+      products.map(p => [p._id.toString(), p])
+    )
+
+    // Format reviews
+    const formattedReviews = data?.map(review => {
+      const product = productMap.get(review.product_id)
+      return {
+        id: review.id,
+        productId: review.product_id,
+        productName: product?.name || 'Unknown Product',
+        productSlug: product?.slug,
+        productImage: product?.images?.[0],
+        userId: review.user_id,
+        userName: review.profiles?.full_name || 'Anonymous',
+        rating: review.rating,
+        title: review.title,
+        comment: review.comment,
+        isVerifiedPurchase: review.is_verified_purchase,
+        helpfulCount: review.helpful_count,
+        adminReply: review.admin_reply,
+        adminReplyAt: review.admin_reply_at,
+        createdAt: review.created_at,
+        updatedAt: review.updated_at,
+      }
+    }) || []
+
+    // Get stats
+    const { data: allReviews } = await supabase
+      .from('reviews')
+      .select('rating, admin_reply')
+
+    const stats = {
+      total: allReviews?.length || 0,
+      withReply: allReviews?.filter(r => r.admin_reply).length || 0,
+      withoutReply: allReviews?.filter(r => !r.admin_reply).length || 0,
+      averageRating: allReviews?.length 
+        ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length 
+        : 0,
+      byRating: {
+        5: allReviews?.filter(r => r.rating === 5).length || 0,
+        4: allReviews?.filter(r => r.rating === 4).length || 0,
+        3: allReviews?.filter(r => r.rating === 3).length || 0,
+        2: allReviews?.filter(r => r.rating === 2).length || 0,
+        1: allReviews?.filter(r => r.rating === 1).length || 0,
+      },
+    }
+
+    return {
+      success: true,
+      data: formattedReviews,
+      total: count || 0,
+      totalPages: Math.ceil((count || 0) / limit),
+      stats,
+    }
+  } catch (error) {
+    console.error('Error fetching admin reviews:', error)
+    return { success: false, error: 'Failed to fetch reviews' }
+  }
+}
+
+export async function replyToReview(reviewId: string, replyText: string) {
+  try {
+    const isAdmin = await isAdminUser()
+    if (!isAdmin) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    if (!replyText || replyText.trim().length === 0) {
+      return { success: false, error: 'Reply text is required' }
+    }
+
+    if (replyText.length > 1000) {
+      return { success: false, error: 'Reply must be less than 1000 characters' }
+    }
+
+    const supabase = createAdminClient()
+
+    // Get review product_id for revalidation
+    const { data: review } = await supabase
+      .from('reviews')
+      .select('product_id')
+      .eq('id', reviewId)
+      .single()
+
+    if (!review) {
+      return { success: false, error: 'Review not found' }
+    }
+
+    const { error } = await supabase
+      .from('reviews')
+      .update({
+        admin_reply: replyText,
+        admin_reply_at: new Date().toISOString(),
+      })
+      .eq('id', reviewId)
+
+    if (error) throw error
+
+    revalidatePath(`/shop/product/${review.product_id}`)
+    revalidatePath('/admin/reviews')
+
+    return { success: true, message: 'Reply added successfully' }
+  } catch (error) {
+    console.error('Error replying to review:', error)
+    return { success: false, error: 'Failed to add reply' }
+  }
+}
+
+export async function deleteAdminReply(reviewId: string) {
+  try {
+    const isAdmin = await isAdminUser()
+    if (!isAdmin) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const supabase = createAdminClient()
+
+    // Get review product_id for revalidation
+    const { data: review } = await supabase
+      .from('reviews')
+      .select('product_id')
+      .eq('id', reviewId)
+      .single()
+
+    if (!review) {
+      return { success: false, error: 'Review not found' }
+    }
+
+    const { error } = await supabase
+      .from('reviews')
+      .update({
+        admin_reply: null,
+        admin_reply_at: null,
+      })
+      .eq('id', reviewId)
+
+    if (error) throw error
+
+    revalidatePath(`/shop/product/${review.product_id}`)
+    revalidatePath('/admin/reviews')
+
+    return { success: true, message: 'Reply deleted successfully' }
+  } catch (error) {
+    console.error('Error deleting admin reply:', error)
+    return { success: false, error: 'Failed to delete reply' }
+  }
+}
+
+export async function deleteReviewAdmin(reviewId: string) {
+  try {
+    const isAdmin = await isAdminUser()
+    if (!isAdmin) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const supabase = createAdminClient()
+
+    // Get review product_id for revalidation and stats update
+    const { data: review } = await supabase
+      .from('reviews')
+      .select('product_id')
+      .eq('id', reviewId)
+      .single()
+
+    if (!review) {
+      return { success: false, error: 'Review not found' }
+    }
+
+    const { error } = await supabase
+      .from('reviews')
+      .delete()
+      .eq('id', reviewId)
+
+    if (error) throw error
+
+    // Update MongoDB stats asynchronously
+    updateProductReviewStatsAdmin(review.product_id).catch(err =>
+      console.error('Error updating review stats:', err)
+    )
+
+    revalidatePath(`/shop/product/${review.product_id}`)
+    revalidatePath('/admin/reviews')
+
+    return { success: true, message: 'Review deleted successfully' }
+  } catch (error) {
+    console.error('Error deleting review:', error)
+    return { success: false, error: 'Failed to delete review' }
+  }
+}
+
+// Helper function to update MongoDB review stats (admin version)
+async function updateProductReviewStatsAdmin(productId: string) {
+  try {
+    const supabase = createAdminClient()
+    
+    const { data: reviews, error } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('product_id', productId)
+
+    if (error) throw error
+
+    if (!reviews || reviews.length === 0) {
+      await connectToDB()
+      await Product.findByIdAndUpdate(productId, {
+        reviewStats: {
+          average: 0,
+          count: 0,
+          distribution: [0, 0, 0, 0, 0],
+        },
+      })
+      return
+    }
+
+    // Calculate stats
+    const distribution: [number, number, number, number, number] = [0, 0, 0, 0, 0]
+    let sum = 0
+
+    reviews.forEach(review => {
+      sum += review.rating
+      distribution[review.rating - 1]++
+    })
+
+    const stats = {
+      average: sum / reviews.length,
+      count: reviews.length,
+      distribution,
+    }
+
+    await connectToDB()
+    await Product.findByIdAndUpdate(productId, { reviewStats: stats })
+  } catch (error) {
+    console.error('Error updating product review stats:', error)
+    throw error
   }
 }

@@ -38,7 +38,7 @@ const categories = [
 
 const features = [
     { icon: Leaf, title: "Eco-Friendly", description: "Sustainable materials" },
-    { icon: Truck, title: "Free Shipping", description: "On orders over $100" },
+    { icon: Truck, title: "Free Shipping", description: "On orders over AED 200" },
     { icon: RefreshCw, title: "Easy Returns", description: "30-day return policy" },
     { icon: Shield, title: "Secure Checkout", description: "100% protected" },
 ]

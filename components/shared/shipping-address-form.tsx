@@ -2,42 +2,26 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Modal } from "@/components/ui/modal";
-import dynamic from "next/dynamic";
 import { ShippingAddressSchema } from "@/lib/validator";
 import { z } from "zod";
-import { toast } from "react-toastify";
-import { MapPin } from "lucide-react";
-
-// Dynamic import for Map to avoid SSR issues
-const Map = dynamic(() => import("./map"), { ssr: false });
-
-const EMIRATES = [
-  "Abu Dhabi",
-  "Dubai",
-  "Sharjah",
-  "Ajman",
-  "Umm Al Quwain",
-  "Ras Al Khaimah",
-  "Fujairah",
-];
-
-const COUNTRIES = ["UAE"]; // Extensible for later
+import { toast } from "sonner";
+import { MapPin, Navigation } from "lucide-react";
+import { LocationPickerModal } from "./location-picker";
 
 type ShippingAddress = z.infer<typeof ShippingAddressSchema>;
 
 export default function ShippingAddressForm({
   initialAddress,
   onSave,
+  fullName = "",
 }: {
   initialAddress?: ShippingAddress;
   onSave: (address: ShippingAddress) => void;
+  fullName?: string;
 }) {
   const [address, setAddress] = useState<ShippingAddress>(
     initialAddress || {
-      fullName: "",
+      fullName: fullName,
       street: "",
       city: "",
       emirate: "",
@@ -47,158 +31,106 @@ export default function ShippingAddressForm({
     }
   );
 
-  const [isMapOpen, setIsMapOpen] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
-  const handleChange = (field: keyof ShippingAddress, value: any) => {
-    setAddress((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-  };
-
-  const handleLocationSelect = (lat: number, lng: number) => {
-    setAddress((prev) => ({ ...prev, lat, lng }));
-  };
-
-  const handleMapConfirm = () => {
-      setIsMapOpen(false);
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = ShippingAddressSchema.safeParse(address);
-    if (!result.success) {
-      const newErrors: Record<string, string> = {};
-      result.error.issues.forEach((err) => {
-        if (err.path[0]) {
-          newErrors[err.path[0] as string] = err.message;
-        }
-      });
-      setErrors(newErrors);
-      toast.error("Please fix the errors in the form");
-      return;
-    }
-    onSave(result.data);
+  const handleLocationConfirm = (location: any) => {
+    // Update address with location data
+    const newAddress: ShippingAddress = {
+      fullName: fullName || address.fullName || '', 
+      street: location.address || '',
+      city: location.city || '',
+      emirate: location.emirate || '',
+      country: "UAE",
+      lat: location.coordinates.lat,
+      lng: location.coordinates.lng,
+    };
+    
+    setAddress(newAddress);
+    onSave(newAddress);
     toast.success("Address saved successfully");
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* <h2 className="text-xl font-semibold">Shipping Address</h2> */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-3 col-span-2">
-            <label className="text-sm font-medium text-center">Full Name</label>
-            <Input
-              value={address.fullName}
-              onChange={(e) => handleChange("fullName", e.target.value)}
-              placeholder="John Doe"
-              className=""
-            />
-            {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName}</p>}
-          </div>
-          {/* <div className="space-y-2">
-            <label className="text-sm font-medium">Country</label>
-            <Select
-              value={address.country}
-              onValueChange={(val) => handleChange("country", val)}
-            >
-              <SelectTrigger className="cursor-pointer">
-                <SelectValue placeholder="Select Country" />
-              </SelectTrigger>
-              <SelectContent>
-                {COUNTRIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.country && <p className="text-red-500 text-xs">{errors.country}</p>}
-          </div> */}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Emirate</label>
-            <Select
-              value={address.emirate}
-              onValueChange={(val) => handleChange("emirate", val)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Emirate" />
-              </SelectTrigger>
-              <SelectContent>
-                {EMIRATES.map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {e}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.emirate && <p className="text-red-500 text-xs">{errors.emirate}</p>}
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">City</label>
-            <Input
-              value={address.city}
-              onChange={(e) => handleChange("city", e.target.value)}
-              placeholder="Dubai"
-            />
-            {errors.city && <p className="text-red-500 text-xs">{errors.city}</p>}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Street Address</label>
-          <Input
-            value={address.street}
-            onChange={(e) => handleChange("street", e.target.value)}
-            placeholder="123 Main St, Apt 4B"
-          />
-          {errors.street && <p className="text-red-500 text-xs">{errors.street}</p>}
-        </div>
-
-        {/* <div className="space-y-2">
-            <label className="text-sm font-medium">Location</label>
-            <div className="flex items-center gap-4">
-                <Button type="button" variant="outline" onClick={() => setIsMapOpen(true)} className="w-full md:w-auto">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    {address.lat && address.lng ? "Change Location on Map" : "Choose on Map"}
-                </Button>
-                {address.lat && address.lng && (
-                    <span className="text-xs text-muted-foreground">
-                        Selected: {address.lat.toFixed(4)}, {address.lng.toFixed(4)}
-                    </span>
-                )}
+    <div className="space-y-4">
+      {/* Selected Address Preview */}
+      {address.lat && address.lng && address.street ? (
+        <div className="group relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent opacity-50 group-hover:opacity-70 transition-opacity" />
+          <div className="relative p-5 bg-card border border-primary/20 rounded-2xl shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0 shadow-lg">
+                <MapPin className="w-7 h-7 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-lg text-foreground mb-1.5">{address.fullName}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-1">
+                  {address.street}
+                </p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  {address.city}, {address.emirate}
+                </p>
+                <div className="flex items-center gap-1.5 mt-3 text-xs text-primary/70 font-mono">
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>{address.lat.toFixed(4)}°N, {address.lng.toFixed(4)}°E</span>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsLocationModalOpen(true)}
+                className="shrink-0 text-primary hover:text-primary/90 hover:bg-primary/10 font-medium"
+              >
+                Change
+              </Button>
             </div>
-        </div> */}
-
-        <Button type="submit" className="w-full cursor-pointer hover:bg-gray-800 active:scale-95">Save Address</Button>
-      </form>
-
-      <Modal
-        isOpen={isMapOpen}
-        onClose={() => setIsMapOpen(false)}
-        title="Select Location"
-        className="max-w-3xl"
-      >
-        <div className="space-y-4">
-            <Map
-                location={address.lat && address.lng ? { lat: address.lat, lng: address.lng } : undefined}
-                onLocationSelect={handleLocationSelect}
-            />
-            <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsMapOpen(false)}>Cancel</Button>
-                <Button onClick={handleMapConfirm}>Confirm Location</Button>
-            </div>
+          </div>
         </div>
-      </Modal>
+      ) : (
+        /* Initial state - no address selected */
+        <div className="text-center py-12 space-y-6">
+          <div className="relative w-24 h-24 mx-auto">
+            <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse" />
+            <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-xl">
+              <MapPin className="w-12 h-12 text-white" />
+            </div>
+          </div>
+          <div>
+            <h3 className="font-bold text-xl mb-2.5 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Select Your Location
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+              Choose your exact delivery location on the map for accurate shipping calculation  and faster delivery
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => setIsLocationModalOpen(true)}
+            size="lg"
+            className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all"
+          >
+            <MapPin className="w-5 h-5 mr-2" />
+            Select Location on Map
+          </Button>
+        </div>
+      )}
+
+      {/* Location Picker Modal */}
+      <LocationPickerModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        onConfirm={handleLocationConfirm}
+        initialLocation={
+          address.lat && address.lng
+            ? {
+                address: address.street || '',
+                coordinates: { lat: address.lat, lng: address.lng },
+                city: address.city,
+                emirate: address.emirate,
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }

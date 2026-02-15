@@ -1,27 +1,22 @@
 'use client'
 
-import dynamic from 'next/dynamic'
-
-// Lazy load ToastContainer - only loads JS when actually rendered
-const ToastContainer = dynamic(
-  () => import('react-toastify').then((mod) => mod.ToastContainer),
-  { ssr: false }
-)
+import { Toaster } from 'sonner'
 
 export default function ToastProvider() {
   return (
-    <ToastContainer
-      position="top-right"
-      autoClose={2000}
-      hideProgressBar={false}
-      newestOnTop={false}
-      closeOnClick
-      rtl={false}
-      pauseOnFocusLoss
-      draggable
-      pauseOnHover
-      theme="light"
-      toastClassName="mt-16" 
+    <Toaster 
+      position="bottom-right"
+      duration={3000}
+      closeButton
+      richColors
+      toastOptions={{
+        className: 'mt-16',
+        style: {
+          background: 'white',
+          border: '1px solid #e5e7eb',
+          color: '#1f2937',
+        },
+      }}
     />
   )
 }

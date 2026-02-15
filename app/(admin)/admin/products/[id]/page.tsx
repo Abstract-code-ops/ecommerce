@@ -27,7 +27,7 @@ import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { getAdminProductById, updateProduct, deleteProduct } from '@/lib/actions/admin.actions'
 import { uploadMultipleToCloudinary, deleteFromCloudinary } from '@/lib/actions/upload.actions'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 // Default categories and tags
 const defaultCategories = ['Paper Bags', 'Kraft Bags', 'Gift Bags', 'Eco Bags', 'Custom Bags', 'Shopping Bags', 'Food Packaging']
@@ -466,6 +466,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                         alt={`Product image ${index + 1}`}
                         fill
                         className="object-cover"
+                        loading="lazy"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                       />
                       <button
                         type="button"

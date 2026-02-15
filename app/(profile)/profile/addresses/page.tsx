@@ -4,14 +4,12 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Modal } from '@/components/ui/modal'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { 
   MapPin, Plus, Edit2, Trash2, Home, Building2, 
   Star, Check, Loader2, Navigation, X
 } from 'lucide-react'
-import dynamic from 'next/dynamic'
 
 // Import Supabase actions
 import { 
@@ -22,14 +20,7 @@ import {
   setDefaultAddress 
 } from '@/lib/actions/address.actions'
 import { Address, Address as SupabaseAddress } from '@/types/supabase'
-
-// Dynamic import for Map to avoid SSR issues
-const Map = dynamic(() => import('@/components/shared/map'), { ssr: false })
-
-const EMIRATES = [
-  "Abu Dhabi", "Dubai", "Sharjah", "Ajman", 
-  "Umm Al Quwain", "Ras Al Khaimah", "Fujairah"
-]
+import { LocationPickerModal } from '@/components/shared/location-picker'
 
 // Local address type for form handling (maps to Supabase Address)
 type AddressFormData = {
@@ -155,13 +146,28 @@ export default function AddressesPage() {
     setIsModalOpen(true)
   }
 
-  const handleLocationSelect = (lat: number, lng: number) => {
-    setFormData(prev => ({ ...prev, lat, lng }))
+  const handleLocationConfirm = (location: any) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      street: location.address || prev.street,
+      city: location.city || prev.city,
+      emirate: location.emirate || prev.emirate,
+      lat: location.coordinates.lat,
+      lng: location.coordinates.lng,
+    }))
+    setIsMapOpen(false)
   }
 
   const handleSave = async () => {
-    if (!formData.fullName || !formData.street || !formData.city || !formData.emirate) {
-      toast.error('Please fill in all required fields')
+    // Validate required fields
+    if (!formData.fullName || !formData.street) {
+      toast.error('Please fill in full name and street address')
+      return
+    }
+
+    // Validate location is set
+    if (!formData.lat || !formData.lng || !formData.emirate) {
+      toast.error('Please select delivery location on the map')
       return
     }
 
@@ -455,35 +461,34 @@ export default function AddressesPage() {
               <Input
                 value={formData.street}
                 onChange={(e) => setFormData(prev => ({ ...prev, street: e.target.value }))}
-                placeholder="123 Main St, Apt 4B"
+                placeholder="Will be auto-filled from map"
+                disabled
+                className="bg-muted/50 cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground mt-1">Select location on map to auto-fill</p>
             </div>
 
-            {/* City & Emirate */}
+            {/* City & Emirate - Auto-filled from map */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium mb-1.5 block">City *</label>
+                <label className="text-sm font-medium mb-1.5 block">City</label>
                 <Input
                   value={formData.city}
                   onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                  placeholder="Dubai Marina"
+                  placeholder="From map"
+                  disabled
+                  className="bg-muted/50 cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Emirate *</label>
-                <Select
+                <label className="text-sm font-medium mb-1.5 block">Emirate</label>
+                <Input
                   value={formData.emirate}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, emirate: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select emirate" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EMIRATES.map(emirate => (
-                      <SelectItem key={emirate} value={emirate}>{emirate}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(e) => setFormData(prev => ({ ...prev, emirate: e.target.value }))}
+                  placeholder="From map"
+                  disabled
+                  className="bg-muted/50 cursor-not-allowed"
+                />
               </div>
             </div>
 
@@ -495,12 +500,24 @@ export default function AddressesPage() {
             >
               <Navigation className="w-4 h-4 text-primary" />
               <span className="text-sm">
-                {formData.lat && formData.lng ? 'Update location on map' : 'Pin location on map'}
+                {formData.lat && formData.lng ? 'Update delivery location' : 'Select delivery location'}
               </span>
               {formData.lat && formData.lng && (
                 <Check className="w-4 h-4 text-emerald-500 ml-1" />
               )}
             </button>
+            
+            {formData.lat && formData.lng && (
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-foreground mb-0.5">Location confirmed</p>
+                    <p>{formData.lat.toFixed(6)}°N, {formData.lng.toFixed(6)}°E</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Default Checkbox */}
             <label className="flex items-center gap-3 cursor-pointer">
@@ -537,38 +554,23 @@ export default function AddressesPage() {
         </div>
       </Modal>
 
-      {/* Map Modal */}
-      <Modal isOpen={isMapOpen} onClose={() => setIsMapOpen(false)}>
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Select Location</h2>
-            <button
-              onClick={() => setIsMapOpen(false)}
-              className="p-2 hover:bg-muted rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="h-[400px] rounded-xl overflow-hidden border border-border">
-            <Map onLocationSelect={handleLocationSelect} />
-          </div>
-          <div className="flex gap-3 mt-4">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setIsMapOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={() => setIsMapOpen(false)}
-            >
-              Confirm Location
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Location Picker Modal */}
+      <LocationPickerModal
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        onConfirm={handleLocationConfirm}
+        initialLocation={
+          formData.lat && formData.lng
+            ? {
+                address: formData.street,
+                coordinates: { lat: formData.lat, lng: formData.lng },
+                emirate: formData.emirate,
+                city: formData.city,
+              }
+            : undefined
+        }
+        title="Select Delivery Location"
+      />
     </div>
   )
 }

@@ -40,7 +40,7 @@ import {
 import { cn } from '@/lib/utils'
 import { getAdminProducts, deleteProduct } from '@/lib/actions/admin.actions'
 import { IProduct } from '@/lib/db/models/product.model'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 type ViewMode = 'table' | 'grid'
 

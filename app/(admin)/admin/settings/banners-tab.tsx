@@ -10,7 +10,7 @@ import { getBanners, createBanner, deleteBanner, toggleBannerStatus, Banner } fr
 import { Trash2, Plus, GripVertical, Image as ImageIcon, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { uploadToCloudinary } from '@/lib/actions/upload.actions'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 export default function BannersTab() {
   const [banners, setBanners] = useState<Banner[]>([])
@@ -190,7 +190,7 @@ export default function BannersTab() {
               <div className="flex items-center gap-4">
                 {newBanner.image_url ? (
                   <div className="relative w-40 h-24 rounded-md overflow-hidden border">
-                    <Image src={newBanner.image_url} alt="Preview" fill className="object-cover" />
+                    <Image src={newBanner.image_url} alt="Preview" fill className="object-cover" loading="lazy" sizes="160px" />
                     <Button 
                       variant="destructive" 
                       size="icon" 
@@ -245,7 +245,7 @@ export default function BannersTab() {
             <div className="flex items-center p-4 gap-4">
               <div className="cursor-move text-muted-foreground"><GripVertical className="w-5 h-5" /></div>
               <div className="relative w-32 h-20 rounded bg-muted flex-shrink-0">
-                <Image src={banner.image_url} alt={banner.title} fill className="object-cover rounded" />
+                <Image src={banner.image_url} alt={banner.title} fill className="object-cover rounded" loading="lazy" sizes="128px" />
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold truncate">{banner.title || 'Untitled Banner'}</h4>

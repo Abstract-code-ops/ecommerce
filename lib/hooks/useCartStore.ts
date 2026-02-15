@@ -21,13 +21,13 @@ import { generateId, round2Decimals } from "../utils";
  * Calculate cart pricing (synchronous version for client-side use)
  * Must match the server-side calculateDateAndPrice logic
  */
-const calculateCartTotals = (items: OrderItem[]) => {
+const calculateCartTotals = (items: OrderItem[], currentShippingPrice: number = 0) => {
     const itemPrice = round2Decimals(
         items.reduce((acc, item) => acc + item.totalPrice, 0)
     );
     
-    // Fixed shipping of 10 AED
-    const shippingPrice = 10;
+    // Use provided shipping price (dynamically calculated based on address)
+    const shippingPrice = currentShippingPrice;
     
     // No tax
     const taxPrice = 0;
@@ -60,7 +60,8 @@ const initialState: Cart = {
     totalItems: 0,
     paymentMethod: undefined,
     deliveryDateIndex: undefined,
-    expectedDeliveryDate: undefined
+    expectedDeliveryDate: undefined,
+    shippingAddress: undefined,
 }
 
 /**
@@ -98,6 +99,19 @@ interface CartState {
      * @param paymentMethod - 'Card' | 'CashOnDelivery'
      */
     setPaymentMethod: (paymentMethod: string) => void
+    
+    /**
+     * Set the shipping address for the order
+     * This will automatically trigger shipping cost calculation
+     * @param address - Shipping address with coordinates
+     */
+    setShippingAddress: (address: any) => Promise<void>
+    
+    /**
+     * Update shipping cost based on address and cart total
+     * @param shippingCost - Calculated shipping cost
+     */
+    updateShippingCost: (shippingCost: number) => void
     
     /**
      * Clear all items from cart
@@ -154,7 +168,7 @@ const useCartStore = create(
                     cart: {
                         ...get().cart,
                         items: updatedCartItems,
-                        ...calculateCartTotals(updatedCartItems),
+                        ...calculateCartTotals(updatedCartItems, get().cart.shippingPrice),
                     },
                 });
 
@@ -177,7 +191,7 @@ const useCartStore = create(
                     cart: {
                         ...get().cart,
                         items: updatedCartItems,
-                        ...calculateCartTotals(updatedCartItems),
+                        ...calculateCartTotals(updatedCartItems, get().cart.shippingPrice),
                     },
                 });
             },
@@ -214,7 +228,7 @@ const useCartStore = create(
                     cart: {
                         ...get().cart,
                         items: updatedCartItems,
-                        ...calculateCartTotals(updatedCartItems),
+                        ...calculateCartTotals(updatedCartItems, get().cart.shippingPrice),
                     },
                 });
             },
@@ -225,6 +239,68 @@ const useCartStore = create(
             setPaymentMethod: (paymentMethod: string) => {
                 set({
                     cart: { ...get().cart, paymentMethod },
+                });
+            },
+            
+            /**
+             * Set Shipping Address
+             * Automatically calculates shipping cost based on address
+             */
+            setShippingAddress: async (address: any) => {
+                set({
+                    cart: { 
+                        ...get().cart, 
+                        shippingAddress: address 
+                    },
+                });
+                
+                // Calculate shipping if address has coordinates
+                if (address.lat && address.lng) {
+                    try {
+                        const { calculateShippingCost } = await import('../actions/shipping.actions');
+                        // Use items total (without shipping) for calculation
+                        const itemsTotal = round2Decimals(
+                            get().cart.items.reduce((acc, item) => acc + item.totalPrice, 0)
+                        );
+                        const result = await calculateShippingCost({
+                            destination: { lat: address.lat, lng: address.lng },
+                            cartTotal: itemsTotal,
+                            emirate: address.emirate,
+                        });
+                        
+                        if (result.success && result.data) {
+                            get().updateShippingCost(result.data.cost);
+                        }
+                    } catch (error) {
+                        console.error('Error calculating shipping:', error);
+                        // Fallback to default shipping
+                        get().updateShippingCost(10);
+                    }
+                } else {
+                    // No coordinates, use default shipping
+                    get().updateShippingCost(10);
+                }
+            },
+            
+            /**
+             * Update Shipping Cost
+             * Recalculates grand total
+             */
+            updateShippingCost: (shippingCost: number) => {
+                const { cart } = get();
+                const itemPrice = round2Decimals(
+                    cart.items.reduce((acc, item) => acc + item.totalPrice, 0)
+                );
+                const taxPrice = 0;
+                const totalPrice = round2Decimals(shippingCost + itemPrice + taxPrice);
+                
+                set({
+                    cart: {
+                        ...cart,
+                        shippingPrice: shippingCost,
+                        totalPrice: totalPrice,
+                        taxPrice,
+                    },
                 });
             },
             
@@ -247,23 +323,3 @@ const useCartStore = create(
 )
 
 export default useCartStore
-
-/**
- * TODO: Future Enhancements
- * 
- * 1. Stock Validation on Load
- *    - Validate stock when cart loads from localStorage
- *    - Handle items that went out of stock
- * 
- * 2. Price Update Detection
- *    - Check if prices changed since item was added
- *    - Notify user before checkout
- * 
- * 3. Cart Expiration
- *    - Auto-clear cart after X days of inactivity
- *    - Add timestamp to cart items
- * 
- * 4. Multi-device Sync
- *    - Sync cart across devices (requires backend)
- *    - Conflict resolution strategy
- */

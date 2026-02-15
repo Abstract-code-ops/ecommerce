@@ -11,6 +11,8 @@ const inter = Inter({
   variable: "--font-inter",
   display: "swap",
   preload: true,
+  fallback: ['system-ui', 'arial'],
+  adjustFontFallback: true,
 });
 
 // Configure Spectral Light - Secondary font
@@ -20,6 +22,8 @@ const spectral = Spectral({
   variable: "--font-spectral", 
   display: "swap",
   preload: false, // Don't preload secondary fonts
+  fallback: ['Georgia', 'serif'],
+  adjustFontFallback: true,
 });
 
 // Removed Tangerine font - not commonly used, reduces network requests
@@ -30,6 +34,8 @@ const karlaBold = Karla({
   variable: "--font-karla-bold",
   display: "swap",
   preload: false,
+  fallback: ['system-ui', 'sans-serif'],
+  adjustFontFallback: true,
 });
 
 export const viewport: Viewport = {
@@ -56,6 +62,10 @@ export default function RootLayout({
     <html lang="en" className="">
       <head>
         {/* Preconnect to external domains for faster loading */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <link rel="preconnect" href="https://placehold.co" />
         <link rel="dns-prefetch" href="https://placehold.co" />
       </head>

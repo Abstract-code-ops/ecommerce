@@ -6,6 +6,8 @@ export const APP_DESCRIPTION =
     "Discover a wide range of products at unbeatable prices. Shop now and experience the best in online shopping!";
 
 export const PAGE_SIZE = Number(process.env.NEXT_PUBLIC_PAGE_SIZE) || 10;
-
-// Admin emails - users with these emails can access the admin dashboard
-export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'support@globaledgeshop.com').split(',').map(email => email.trim());
+export const USER_ROLES = {
+  ADMIN: 'admin',
+  USER: 'user',
+  GUEST: 'guest',
+} as const

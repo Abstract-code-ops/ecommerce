@@ -1,5 +1,5 @@
 'use client'
-import { FormEventHandler, useEffect, useState } from "react";
+import { FormEventHandler, useEffect, useState, useRef } from "react";
 import { SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,6 +15,7 @@ import { getSearchSuggestions } from "@/lib/actions/product.actions";
 import type { IProduct } from "@/lib/db/models/product.model";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const caegories = ["paper bags", "plastic bags", "gift boxes", "wrapping paper", "ribbons", "tape", "labels"];
 
@@ -27,6 +28,8 @@ export default function Search({ className, onSubmit }: SearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<IProduct[]>([]);
   const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
@@ -42,6 +45,12 @@ export default function Search({ className, onSubmit }: SearchProps) {
 
     return () => clearTimeout(delayDebounceFn);
   }, [query]);
+
+  const handleResultClick = (slug: string) => {
+    setOpen(false);
+    setQuery("");
+    router.push(`/shop/products/${slug}`);
+  };
 
   return (
     <div className="relative w-full max-w-lg mx-auto">
@@ -73,7 +82,12 @@ export default function Search({ className, onSubmit }: SearchProps) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          onBlur={(e) => {
+            // Only close if clicking outside the dropdown
+            if (!dropdownRef.current?.contains(e.relatedTarget as Node)) {
+              setTimeout(() => setOpen(false), 150);
+            }
+          }}
           onFocus={() => { if(query) setOpen(true) }}
         />
         <button
@@ -84,13 +98,16 @@ export default function Search({ className, onSubmit }: SearchProps) {
         </button>
       </form>
       {open && results.length > 0 && (
-        <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-[100] mt-1 max-h-80 overflow-y-auto">
+        <div 
+          ref={dropdownRef}
+          className="absolute top-full left-0 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-[100] mt-1 max-h-80 overflow-y-auto"
+        >
           {results.map((product) => (
-            <Link 
-              href={`/shop/products/${product.slug}`} 
+            <button
               key={product.slug}
-              className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              onClick={() => setOpen(false)}
+              type="button"
+              className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors w-full text-left"
+              onClick={() => handleResultClick(product.slug)}
             >
               <div className="relative w-10 h-10 shrink-0">
                 <Image 
@@ -98,14 +115,15 @@ export default function Search({ className, onSubmit }: SearchProps) {
                   alt={product.name} 
                   fill 
                   className="object-cover rounded-sm"
-                  unoptimized
+                  loading="lazy"
+                  sizes="40px"
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate text-black dark:text-white">{product.name}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{product.price} AED</p>
               </div>
-            </Link>
+            </button>
           ))}
         </div>
       )}

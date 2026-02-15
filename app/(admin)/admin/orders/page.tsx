@@ -39,7 +39,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getAdminOrders, updateOrderStatus } from '@/lib/actions/admin.actions'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 type OrderData = {
   id: string

@@ -4,10 +4,10 @@ import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import Image from 'next/image'
 import { 
-  Eye, EyeOff, Loader2
+  Eye, EyeOff, Loader2, ArrowLeft
 } from 'lucide-react'
 
 const SignInPage = () => {
@@ -84,7 +84,14 @@ const SignInPage = () => {
     <div
     className="flex h-auto min-h-screen items-center justify-center overflow-x-hidden bg-[url('https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/auth/auth-background-2.png')] bg-cover bg-center bg-no-repeat py-10"
   >
-    <div className="relative flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <Link
+        href="/shop"
+        className="absolute left-4 top-4 inline-flex items-center gap-2 px-3 py-1.5 bg-card/95 border border-border rounded-md shadow-sm transition-transform duration-200 hover:translate-x-0.5 hover:bg-primary hover:text-primary-foreground"
+      >
+        <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" />
+        <span className="text-sm font-medium">Back to Shop</span>
+      </Link>
+      <div className="relative flex items-center justify-center px-4 sm:px-6 lg:px-8">
       {/* <div className="absolute">
         <svg width="612" height="697" viewBox="0 0 612 697" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path

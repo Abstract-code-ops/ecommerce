@@ -57,7 +57,7 @@ const Footer = () => {
                 width={48}
                 height={48}
                 className="object-contain brightness-0 invert transition-transform duration-300 group-hover:scale-105"
-                unoptimized
+                loading="lazy"
               />
               <span className="font-serif text-2xl">{App_NAME}</span>
             </Link>

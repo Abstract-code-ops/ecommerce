@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -295,12 +296,13 @@ export default function CustomersPage() {
                     <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium overflow-hidden">
+                          <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium overflow-hidden relative">
                             {customer.avatarUrl ? (
-                              <img 
+                              <Image 
                                 src={customer.avatarUrl} 
                                 alt={customer.fullName}
-                                className="h-full w-full object-cover"
+                                fill
+                                className="object-cover"
                               />
                             ) : (
                               customer.fullName?.charAt(0)?.toUpperCase() || '?'
@@ -445,12 +447,13 @@ export default function CustomersPage() {
                 <div className="space-y-6">
                   {/* Customer Info */}
                   <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-medium overflow-hidden">
+                    <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-medium overflow-hidden relative">
                       {selectedCustomer.avatarUrl ? (
-                        <img 
+                        <Image 
                           src={selectedCustomer.avatarUrl} 
                           alt={selectedCustomer.fullName}
-                          className="h-full w-full object-cover"
+                          fill
+                          className="object-cover"
                         />
                       ) : (
                         selectedCustomer.fullName?.charAt(0)?.toUpperCase() || '?'

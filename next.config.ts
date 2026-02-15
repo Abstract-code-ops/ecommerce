@@ -5,10 +5,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
-      },
-      {
-        protocol: 'https',
         hostname: 'cdnjs.cloudflare.com',
       },
       {
@@ -27,6 +23,7 @@ const nextConfig: NextConfig = {
     // Reduce image sizes for faster loading
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    dangerouslyAllowSVG: false,
   },
   // Enable compression
   compress: true,

@@ -32,7 +32,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getAdminOrderById, updateOrderStatus, updateOrderTracking, updateOrderNotes, updatePaymentStatus } from '@/lib/actions/admin.actions'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',

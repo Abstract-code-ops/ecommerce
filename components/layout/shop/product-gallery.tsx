@@ -3,7 +3,9 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react'
+import Lightbox from 'yet-another-react-lightbox'
+import 'yet-another-react-lightbox/styles.css'
 
 // Swiper imports
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -23,6 +25,18 @@ interface ProductGalleryProps {
 export default function ProductGallery({ images }: ProductGalleryProps) {
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index)
+    setLightboxOpen(true)
+  }
+
+  // Prepare slides for lightbox
+  const lightboxSlides = images.map((img) => ({
+    src: img,
+  }))
 
   return (
     <div className="max-w-4xl flex flex-col gap-4 relative mx-auto">
@@ -43,21 +57,29 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
         >
           {images.map((img, index) => (
             <SwiperSlide key={`main-${index}`}>
-              <div className={cn(
-                "relative w-full overflow-hidden",
-                // Mobile: Takes up most of the screen height
-                "h-[75vh]", 
-                // Desktop: Fixed height or dynamic
-                "lg:h-[800px] lg:aspect-auto"
-              )}>
+              <div 
+                className={cn(
+                  "relative w-full overflow-hidden cursor-zoom-in",
+                  // Mobile: Takes up most of the screen height
+                  "h-[75vh]", 
+                  // Desktop: Fixed height or dynamic
+                  "lg:h-[800px] lg:aspect-auto"
+                )}
+                onClick={() => openLightbox(index)}
+              >
                 <Image
                   src={img}
                   alt={`Product image ${index + 1}`}
                   fill
                   className="object-cover object-center"
                   priority={index === 0}
-                  unoptimized
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  sizes="(max-width: 1024px) 100vw, 800px"
                 />
+                {/* Zoom icon hint */}
+                <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none hidden lg:block">
+                  <ZoomIn size={20} />
+                </div>
               </div>
             </SwiperSlide>
           ))}
@@ -104,7 +126,8 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
                                 alt={`Thumbnail ${index + 1}`}
                                 fill
                                 className="object-cover transition-transform duration-300 hover:scale-110"
-                                unoptimized
+                                loading="lazy"
+                                sizes="80px"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-foreground/30 to-transparent transition-all" />
                             {/* Active State Overlay handled by CSS below */}
@@ -116,6 +139,72 @@ export default function ProductGallery({ images }: ProductGalleryProps) {
             </div>
         </div>
       </div>
+
+      {/* Lightbox */}
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        slides={lightboxSlides}
+        index={lightboxIndex}
+        on={{
+          view: ({ index }) => setLightboxIndex(index),
+        }}
+        carousel={{
+          finite: false,
+        }}
+        controller={{
+          closeOnBackdropClick: true,
+        }}
+        styles={{
+          container: { 
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            position: 'fixed',
+            inset: '0',
+            width: '100vw',
+            height: '100vh',
+            overflow: 'hidden'
+          },
+          root: {
+            '--yarl__slide_image_max_width': '100vw',
+            '--yarl__slide_image_max_height': '100vh',
+          } as any,
+        }}
+        render={{
+          slide: ({ slide }) => (
+            <div 
+              onClick={(e) => {
+                // Close lightbox when clicking the backdrop (not the image)
+                if (e.target === e.currentTarget) {
+                  setLightboxOpen(false);
+                }
+              }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+                padding: '0',
+                cursor: 'zoom-out'
+              }}
+            >
+              <img
+                src={slide.src}
+                alt="Product"
+                style={{
+                  maxWidth: '100vw',
+                  maxHeight: '100vh',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  cursor: 'default'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          ),
+        }}
+      />
 
       {/* Styles for the active thumbnail state */}
       <style jsx global>{`

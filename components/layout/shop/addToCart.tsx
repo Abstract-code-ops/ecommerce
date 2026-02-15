@@ -3,7 +3,7 @@ import React, { useState, lazy, Suspense } from 'react';
 import { ShoppingCart, Check, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency, generateId } from '@/lib/utils';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import useCartStore from '@/lib/hooks/useCartStore';
 import { OrderItem } from '@/types';
 
@@ -11,16 +11,6 @@ import { OrderItem } from '@/types';
 const MotionDiv = lazy(() => 
   import('framer-motion').then(mod => ({ default: mod.motion.div }))
 );
-
-// Helper function to fetch stock via API route (avoids importing server-side code)
-async function getProductStock(productId: string): Promise<{ success: boolean; stock?: number; error?: string }> {
-  try {
-    const response = await fetch(`/api/products/stock?id=${productId}`);
-    return await response.json();
-  } catch {
-    return { success: false, error: 'Failed to fetch stock' };
-  }
-}
 
 const AddToCartButton = ({
   className,
@@ -37,7 +27,7 @@ const AddToCartButton = ({
   product,
   size,
   color,
-  showPrice = true, // <-- new prop, default true
+  showPrice = true,
 }: {
   className?: string;
   price?: number;
@@ -61,13 +51,16 @@ const AddToCartButton = ({
   };
   size?: string;
   color?: string;
-  showPrice?: boolean; // <-- type added
+  showPrice?: boolean;
 }) => {
-  const [status, setStatus] = useState('idle'); // 'idle', 'animating', 'success', 'checking'
+  const truncate = (s?: string, max = 30) => (s && s.length > max ? `${s.slice(0, max)}...` : s || '');
+
+  const [status, setStatus] = useState('idle');
   const { addItem } = useCartStore();
 
-  // Check if product is out of stock (based on initial data)
+  // Check if product is out of stock
   const isOutOfStock = product && product.countInStock <= 0;
+  const isLowStock = product && product.countInStock > 0 && product.countInStock < quantity;
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (onClick) onClick(e);
@@ -79,33 +72,12 @@ const AddToCartButton = ({
       return;
     }
 
-    // Add to cart if product is provided
     if (product) {
       setStatus('checking');
       
       try {
-        // Fetch fresh stock from database before adding
-        const stockResult = await getProductStock(product._id);
-        
-        if (!stockResult.success) {
-          toast.error('Unable to verify stock. Please try again.');
-          setStatus('idle');
-          return;
-        }
-        
-        const currentStock = stockResult.stock ?? 0;
-        
-        // Check if product is now out of stock
-        if (currentStock <= 0) {
-          toast.error('Sorry, this item is now out of stock');
-          setStatus('idle');
-          return;
-        }
-        
-        // Check if requested quantity exceeds current stock
-        if (quantity > currentStock) {
-          toast.error(`Only ${currentStock} items available in stock`);
-          setStatus('idle');
+        if (quantity > product.countInStock) {
+          toast.error(`Only ${product.countInStock} item${product.countInStock > 1 ? 's' : ''} available`);
           return;
         }
         
@@ -116,7 +88,7 @@ const AddToCartButton = ({
           slug: product.slug,
           category: product.category,
           quantity: quantity,
-          countInStock: currentStock, // Use fresh stock count
+          countInStock: product.countInStock,
           image: product.images[0],
           price: product.price,
           totalPrice: product.price * quantity,
@@ -125,7 +97,7 @@ const AddToCartButton = ({
         };
         
         addItem(orderItem, quantity);
-        toast.success(`${product.name} added to cart!`);
+        toast.success(`${truncate(product.name)} added to cart!`);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Failed to add item to cart');
         setStatus('idle');
@@ -140,7 +112,6 @@ const AddToCartButton = ({
 
     setStatus('success');
 
-    // 3. Reset to idle after a delay
     setTimeout(() => {
       setStatus('idle');
     }, 2000);
@@ -149,28 +120,21 @@ const AddToCartButton = ({
   return (
     <button
       onClick={handleClick}
-      disabled={isOutOfStock || status === 'checking'}
+      disabled={isOutOfStock}
       className={cn(
         `relative overflow-hidden rounded-full text-xs px-0 py-3 font-semibold transition-colors duration-300 ${buttonColor} ${textColor} min-w-30 shadow-lg cursor-pointer active:scale-95`,
-        (isOutOfStock || status === 'checking') && 'opacity-50 cursor-not-allowed',
-        isOutOfStock && 'bg-gray-400 hover:bg-gray-400',
+        isOutOfStock && 'opacity-50 cursor-not-allowed',
         className
       )}
     >
       {/* 1. Button Text (Fades out when animating) */}
       <span
         className={`flex items-center justify-center transition-opacity duration-300 ${
-          status === 'idle' || status === 'checking' ? 'opacity-100' : 'opacity-0'
+          status === 'idle' ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <ShoppingCart className={`mr-2 h-4 w-4 ${status === 'checking' ? 'animate-pulse' : ''}`} />
-        {isOutOfStock ? 'Out of Stock' : status === 'checking' ? 'Checking...' : text}
-        {/* Only render total price when showPrice is true */}
-        {showPrice && price && status !== 'checking' && (
-          <span className="hidden sm:inline text-xs opacity-70 ml-2">
-            — {formatCurrency(price * quantity)}
-          </span>
-        )}
+        {isOutOfStock ? 'Out of Stock' : text}
       </span>
 
       {/* 2. Success Text (Fades in at the end) */}

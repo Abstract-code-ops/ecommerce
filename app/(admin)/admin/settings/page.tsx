@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import BannersTab from './banners-tab'
+import { LocationPickerModal } from '@/components/shared/location-picker'
 
 // Settings navigation
 const settingsSections = [
@@ -48,6 +49,7 @@ const settingsSections = [
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('general')
   const [isSaving, setIsSaving] = useState(false)
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false)
   
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
@@ -79,7 +81,17 @@ export default function SettingsPage() {
     flatRate: 25,
     expressRate: 50,
     enableLocalPickup: true,
-    pickupAddress: 'UAE, Sharjah, Al Majaz'
+    pickupAddress: 'UAE, Sharjah, Al Majaz',
+    storeLocation: {
+      lat: 25.3463,
+      lng: 55.4209,
+      address: 'UAE, Sharjah, Al Majaz',
+      emirate: 'Sharjah',
+    },
+    shortDistanceKm: 50,
+    shortDistanceRate: 25,
+    longDistanceRatePerKm: 0.75,
+    freeShippingEmirates: 'sharjah,ajman',
   })
 
   // Notification settings state
@@ -418,46 +430,119 @@ export default function SettingsPage() {
             <>
               <Card>
                 <CardHeader>
-                  <CardTitle>Shipping Rates</CardTitle>
+                  <CardTitle>Store Location</CardTitle>
                   <CardDescription>
-                    Configure shipping rates for your store
+                    Set your store's exact location for distance-based shipping calculation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 rounded-lg border bg-gray-50">
+                    <div className="flex items-start gap-3 mb-3">
+                      <MapPin className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">
+                          {shippingSettings.storeLocation.address}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {shippingSettings.storeLocation.lat.toFixed(6)}°N, {shippingSettings.storeLocation.lng.toFixed(6)}°E
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Emirate: <span className="font-medium">{shippingSettings.storeLocation.emirate}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsLocationModalOpen(true)}
+                    >
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Change Location
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This location will be used to calculate shipping costs based on distance from customer
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Distance-Based Shipping</CardTitle>
+                  <CardDescription>
+                    Configure distance-based shipping rates
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Free Shipping Threshold (AED)</label>
+                      <label className="text-sm font-medium">Short Distance Threshold (km)</label>
                       <Input
                         type="number"
-                        value={shippingSettings.freeShippingThreshold}
-                        onChange={(e) => setShippingSettings(prev => ({ ...prev, freeShippingThreshold: Number(e.target.value) }))}
+                        value={shippingSettings.shortDistanceKm}
+                        onChange={(e) => setShippingSettings(prev => ({ ...prev, shortDistanceKm: Number(e.target.value) }))}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Orders above this amount get free shipping
+                        Distances below this use flat rate
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Flat Rate (AED)</label>
+                      <label className="text-sm font-medium">Short Distance Rate (AED)</label>
                       <Input
                         type="number"
-                        value={shippingSettings.flatRate}
-                        onChange={(e) => setShippingSettings(prev => ({ ...prev, flatRate: Number(e.target.value) }))}
+                        value={shippingSettings.shortDistanceRate}
+                        onChange={(e) => setShippingSettings(prev => ({ ...prev, shortDistanceRate: Number(e.target.value) }))}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Standard shipping rate
+                        Flat rate for short distances
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Express Rate (AED)</label>
+                      <label className="text-sm font-medium">Long Distance Rate (AED/km)</label>
                       <Input
                         type="number"
-                        value={shippingSettings.expressRate}
-                        onChange={(e) => setShippingSettings(prev => ({ ...prev, expressRate: Number(e.target.value) }))}
+                        step="0.01"
+                        value={shippingSettings.longDistanceRatePerKm}
+                        onChange={(e) => setShippingSettings(prev => ({ ...prev, longDistanceRatePerKm: Number(e.target.value) }))}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Same-day/next-day delivery rate
+                        Rate per kilometer for long distances
                       </p>
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Free Shipping Emirates</label>
+                      <Input
+                        value={shippingSettings.freeShippingEmirates}
+                        onChange={(e) => setShippingSettings(prev => ({ ...prev, freeShippingEmirates: e.target.value }))}
+                        placeholder="sharjah,ajman"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Comma-separated list (e.g., sharjah,ajman)
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Free Shipping</CardTitle>
+                  <CardDescription>
+                    Set minimum order amount for free shipping
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Free Shipping Threshold (AED)</label>
+                    <Input
+                      type="number"
+                      value={shippingSettings.freeShippingThreshold}
+                      onChange={(e) => setShippingSettings(prev => ({ ...prev, freeShippingThreshold: Number(e.target.value) }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Orders above this amount get free shipping
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -734,6 +819,37 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Location Picker Modal */}
+      <LocationPickerModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        onConfirm={(location) => {
+          setShippingSettings(prev => ({
+            ...prev,
+            storeLocation: {
+              lat: location.coordinates.lat,
+              lng: location.coordinates.lng,
+              address: location.address,
+              emirate: location.emirate || 'UAE',
+            },
+          }));
+          setIsLocationModalOpen(false);
+        }}
+        initialLocation={
+          shippingSettings.storeLocation?.lat && shippingSettings.storeLocation?.lng
+            ? {
+                address: shippingSettings.storeLocation.address,
+                coordinates: {
+                  lat: shippingSettings.storeLocation.lat,
+                  lng: shippingSettings.storeLocation.lng,
+                },
+                emirate: shippingSettings.storeLocation.emirate,
+              }
+            : undefined
+        }
+        title="Set Store Location"
+      />
     </div>
   )
 }

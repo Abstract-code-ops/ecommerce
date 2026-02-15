@@ -12,10 +12,11 @@ import {
   ChevronRight, Shield, Truck, RotateCcw, Tag, 
   Clock, Package, Heart, AlertCircle, User, LogIn,
   MapPin, Check, ChevronDown, Home, Building2, Loader2,
-  CheckCircle2, ArrowLeft, Lock, Mail
+  CheckCircle2, ArrowLeft, Lock, Mail, Navigation
 } from 'lucide-react'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import ShippingAddressForm from '@/components/shared/shipping-address-form'
+import GuestInfoForm from '@/components/shared/guest-info-form'
 import { getAddresses, createAddress } from '@/lib/actions/address.actions'
 import { createOrder, validateCartStock } from '@/lib/actions/order.actions'
 import { Address, ShippingAddressSnapshot, ProductSnapshot } from '@/types/supabase'
@@ -23,11 +24,9 @@ import { cn } from '@/lib/utils'
 
 const CartPage = () => {
   const router = useRouter();
-  const { cart, removeItem, updateQuantity, clearCart, setPaymentMethod } = useCartStore();
+  const { cart, removeItem, updateQuantity, clearCart, setPaymentMethod, setShippingAddress } = useCartStore();
   const { items: wishlistItems, toggleItem: toggleWishlist, isInWishlist } = useWishlistStore();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const [promoCode, setPromoCode] = useState('');
-  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState<{ orderNumber: string } | null>(null);
   
@@ -37,9 +36,11 @@ const CartPage = () => {
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isAddressDropdownOpen, setIsAddressDropdownOpen] = useState(false);
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   
   // Guest checkout state
   const [guestEmail, setGuestEmail] = useState('');
+  const [guestName, setGuestName] = useState('');
   
   // Guest address state (when not logged in)
   const [guestAddress, setGuestAddress] = useState<{
@@ -92,6 +93,60 @@ const CartPage = () => {
 
   const selectedAddress = savedAddresses.find(a => a.id === selectedAddressId);
 
+  // Update shipping cost when address changes
+  useEffect(() => {
+    const updateShipping = async () => {
+      if (user && selectedAddress && selectedAddress.lat && selectedAddress.lng) {
+        setIsCalculatingShipping(true);
+        await setShippingAddress({
+          fullName: selectedAddress.full_name,
+          street: selectedAddress.street,
+          city: selectedAddress.city,
+          emirate: selectedAddress.emirate,
+          country: selectedAddress.country || 'UAE',
+          lat: selectedAddress.lat,
+          lng: selectedAddress.lng,
+        });
+        setIsCalculatingShipping(false);
+      } else if (guestAddress && guestAddress.lat && guestAddress.lng) {
+        setIsCalculatingShipping(true);
+        await setShippingAddress(guestAddress);
+        setIsCalculatingShipping(false);
+      }
+    };
+    
+    updateShipping();
+  }, [selectedAddressId, selectedAddress, guestAddress, user, setShippingAddress]);
+
+  // Recalculate shipping when cart items change (quantity, add, remove)
+  useEffect(() => {
+    const recalculateShipping = async () => {
+      // Only recalculate if we have an address with coordinates
+      const hasAddress = (user && selectedAddress?.lat && selectedAddress?.lng) || 
+                        (guestAddress?.lat && guestAddress?.lng);
+      
+      if (!hasAddress || cart.items.length === 0) return;
+
+      setIsCalculatingShipping(true);
+      const currentAddress = user && selectedAddress ? {
+        fullName: selectedAddress.full_name,
+        street: selectedAddress.street,
+        city: selectedAddress.city,
+        emirate: selectedAddress.emirate,
+        country: selectedAddress.country || 'UAE',
+        lat: selectedAddress.lat,
+        lng: selectedAddress.lng,
+      } : guestAddress;
+
+      if (currentAddress) {
+        await setShippingAddress(currentAddress);
+      }
+      setIsCalculatingShipping(false);
+    };
+
+    recalculateShipping();
+  }, [cart.items, user, selectedAddress, guestAddress, setShippingAddress]);
+
   const getAddressTypeIcon = (type: string) => {
     switch (type) {
       case 'home': return Home;
@@ -112,7 +167,8 @@ const CartPage = () => {
     // For guest users, just save locally
     if (!user) {
       setGuestAddress(address);
-      toast.success('Address saved for checkout');
+      setShowAddressForm(false);
+      toast.success('✓ Delivery address confirmed');
       return;
     }
     
@@ -236,9 +292,14 @@ const CartPage = () => {
       return;
     }
 
-    // For guest users, require email
+    // For guest users, require email and name
     if (!user && !guestEmail) {
       toast.error('Please enter your email address');
+      return;
+    }
+
+    if (!user && !guestName) {
+      toast.error('Please enter your full name');
       return;
     }
 
@@ -294,9 +355,21 @@ const CartPage = () => {
       });
 
       if (result.success && result.data) {
-        setCheckoutSuccess({ orderNumber: result.data.orderNumber });
         clearCart();
         toast.success('Order placed successfully!');
+        
+        // Redirect to success page with order details
+        const params = new URLSearchParams({
+          orderNumber: result.data.orderNumber,
+          guest: result.data.isGuest.toString(),
+        });
+        
+        // Add email for guest users
+        if (result.data.isGuest && guestEmail) {
+          params.append('email', guestEmail);
+        }
+        
+        router.push(`/checkout/success?${params.toString()}`);
       } else {
         // Handle out of stock error with specific items
         if (result.outOfStockItems && result.outOfStockItems.length > 0) {
@@ -352,15 +425,6 @@ const CartPage = () => {
     }
   };
 
-  const handleApplyPromo = () => {
-    if (!promoCode.trim()) return;
-    setIsApplyingPromo(true);
-    setTimeout(() => {
-      toast.info('Promo code feature coming soon!');
-      setIsApplyingPromo(false);
-    }, 500);
-  };
-
   // Calculate estimated delivery date (5-7 business days from now)
   const getEstimatedDelivery = () => {
     const start = new Date();
@@ -370,43 +434,6 @@ const CartPage = () => {
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
     return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
   };
-
-  // Order success state
-  if (checkoutSuccess) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center px-4 bg-background">
-        <div className="text-center max-w-md animate-fade-in">
-          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <CheckCircle2 className="w-12 h-12 text-primary" strokeWidth={1.5} />
-          </div>
-          <h1 className="font-serif text-3xl md:text-4xl mb-4 text-foreground">Order Confirmed</h1>
-          <p className="text-muted-foreground mb-2">
-            Thank you for your order. Your order number is:
-          </p>
-          <p className="font-mono text-xl font-semibold text-primary mb-6 bg-primary/5 py-3 px-6 rounded-lg inline-block">
-            {checkoutSuccess.orderNumber}
-          </p>
-          <p className="text-sm text-muted-foreground mb-8">
-            You&apos;ll pay <span className="font-medium text-foreground">Cash on Delivery</span> when your order arrives.
-          </p>
-          <div className="flex gap-4 justify-center flex-wrap">
-            <Link 
-              href="/profile/orders"
-              className="px-6 py-3 border border-border rounded-lg font-medium hover:bg-muted transition-colors"
-            >
-              View Orders
-            </Link>
-            <Link 
-              href="/shop"
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors btn-hover-lift"
-            >
-              Continue Shopping
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Empty cart state
   if (!cart.items || cart.items.length === 0) {
@@ -529,9 +556,9 @@ const CartPage = () => {
                               src={item.image}
                               alt={item.name}
                               fill
+                              loading="lazy"
                               sizes="(max-width: 640px) 96px, 128px"
                               className="object-cover group-hover:scale-105 transition-transform duration-500"
-                              unoptimized
                             />
                           </div>
                         </Link>
@@ -615,7 +642,7 @@ const CartPage = () => {
                           )}
 
                           {/* Price & Quantity */}
-                          <div className="flex items-center justify-between mt-4">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
                             <div className="flex items-center border border-border rounded-lg overflow-hidden">
                               <button
                                 onClick={() => handleUpdateQuantity(item.clientId, item.quantity - 1, item.name)}
@@ -624,7 +651,7 @@ const CartPage = () => {
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
-                              <span className="px-4 text-sm font-medium min-w-[3rem] text-center">
+                              <span className="px-4 text-sm font-medium min-w-12 text-center">
                                 {item.quantity}
                               </span>
                               <button
@@ -635,7 +662,7 @@ const CartPage = () => {
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
                             </div>
-                            <div className="text-right">
+                            <div className="text-left sm:text-right">
                               <span className="font-semibold text-lg text-foreground">
                                 {formatCurrency(item.totalPrice)}
                               </span>
@@ -712,43 +739,12 @@ const CartPage = () => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-card border border-border rounded-xl p-5 mb-6 space-y-4">
-                  {/* Guest Email Input */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      <Mail className="w-4 h-4 inline mr-2" />
-                      Email for Order Updates
-                    </label>
-                    <input
-                      type="email"
-                      value={guestEmail}
-                      onChange={(e) => setGuestEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      className="w-full px-4 py-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    />
-                  </div>
-                  
-                  {/* Sign in suggestion */}
-                  <div className="pt-3 border-t border-border">
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Have an account? Sign in to save addresses & track orders easily.
-                    </p>
-                    <div className="flex gap-3">
-                      <Link 
-                        href="/sign-in?redirect=/cart"
-                        className="flex-1 py-2 px-4 border border-border rounded-lg font-medium text-xs text-center hover:bg-muted transition-colors"
-                      >
-                        Sign In
-                      </Link>
-                      <Link 
-                        href="/sign-up"
-                        className="flex-1 py-2 px-4 bg-primary text-primary-foreground rounded-lg font-medium text-xs text-center hover:bg-primary/90 transition-colors"
-                      >
-                        Sign Up
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+                <GuestInfoForm
+                  email={guestEmail}
+                  name={guestName}
+                  onEmailChange={setGuestEmail}
+                  onNameChange={setGuestName}
+                />
               )}
 
               {/* Shipping Address */}
@@ -766,42 +762,55 @@ const CartPage = () => {
                 ) : savedAddresses.length > 0 && !showAddressForm ? (
                   /* Saved addresses selector */
                   <div className="space-y-4">
-                    {/* Selected Address Display */}
+                    {/* Selected Address Display - Premium Design */}
                     <button
                       onClick={() => setIsAddressDropdownOpen(!isAddressDropdownOpen)}
-                      className="w-full text-left p-4 border border-border rounded-lg hover:border-primary/40 transition-colors"
+                      className="w-full text-left group relative overflow-hidden"
                     >
                       {selectedAddress ? (
-                        <div className="flex items-start gap-3">
-                          {(() => {
-                            const Icon = getAddressTypeIcon(selectedAddress.type);
-                            return (
-                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                <Icon className="w-5 h-5 text-primary" />
+                        <>
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent opacity-50 group-hover:opacity-70 transition-opacity" />
+                          <div className="relative p-4 bg-card border border-primary/20 rounded-xl shadow-sm hover:shadow-md transition-all">
+                            <div className="flex items-start gap-3">
+                              {(() => {
+                                const Icon = getAddressTypeIcon(selectedAddress.type);
+                                return (
+                                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0 shadow-lg">
+                                    <Icon className="w-6 h-6 text-white" />
+                                  </div>
+                                );
+                              })()}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-semibold text-base">{selectedAddress.label}</span>
+                                  {selectedAddress.is_default && (
+                                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Default</span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground leading-relaxed truncate">
+                                  {selectedAddress.street}
+                                </p>
+                                <p className="text-sm text-muted-foreground font-medium truncate">
+                                  {selectedAddress.city}, {selectedAddress.emirate}
+                                </p>
+                                {selectedAddress.lat && selectedAddress.lng && (
+                                  <div className="flex items-center gap-1.5 mt-2 text-xs text-primary/70 font-mono">
+                                    <Navigation className="w-3 h-3" />
+                                    <span>{selectedAddress.lat.toFixed(4)}°N, {selectedAddress.lng.toFixed(4)}°E</span>
+                                  </div>
+                                )}
                               </div>
-                            );
-                          })()}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{selectedAddress.label}</span>
-                              {selectedAddress.is_default && (
-                                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Default</span>
-                              )}
+                              <ChevronDown className={cn(
+                                "w-5 h-5 text-muted-foreground transition-transform shrink-0",
+                                isAddressDropdownOpen && "rotate-180"
+                              )} />
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1 truncate">
-                              {selectedAddress.street}
-                            </p>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {selectedAddress.city}, {selectedAddress.emirate}
-                            </p>
                           </div>
-                          <ChevronDown className={cn(
-                            "w-5 h-5 text-muted-foreground transition-transform",
-                            isAddressDropdownOpen && "rotate-180"
-                          )} />
-                        </div>
+                        </>
                       ) : (
-                        <span className="text-muted-foreground">Select an address</span>
+                        <div className="p-4 border border-dashed border-border rounded-xl">
+                          <span className="text-muted-foreground">Select an address</span>
+                        </div>
                       )}
                     </button>
 
@@ -856,7 +865,7 @@ const CartPage = () => {
                     </button>
                   </div>
                 ) : (
-                  /* Address form for new address or no saved addresses */
+                  /* Address form for new address or no saved addresses OR guest users */
                   <div>
                     {savedAddresses.length > 0 && (
                       <button
@@ -867,7 +876,49 @@ const CartPage = () => {
                         Back to saved addresses
                       </button>
                     )}
-                    <ShippingAddressForm onSave={handleAddressSave} />
+                    
+                    {/* Guest Address Confirmation */}
+                    {!user && guestAddress && (
+                      <div className="mb-4 group relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent opacity-50 transition-opacity" />
+                        <div className="relative p-5 bg-card border border-primary/20 rounded-2xl shadow-sm">
+                          <div className="flex items-start gap-4">
+                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0 shadow-lg">
+                              <MapPin className="w-7 h-7 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-lg text-foreground mb-1.5">{guestAddress.fullName}</p>
+                              <p className="text-sm text-muted-foreground leading-relaxed mb-1">
+                                {guestAddress.street}
+                              </p>
+                              <p className="text-sm text-muted-foreground font-medium">
+                                {guestAddress.city}, {guestAddress.emirate}
+                              </p>
+                              {guestAddress.lat && guestAddress.lng && (
+                                <div className="flex items-center gap-1.5 mt-3 text-xs text-primary/70 font-mono">
+                                  <Navigation className="w-3.5 h-3.5" />
+                                  <span>{guestAddress.lat.toFixed(4)}°N, {guestAddress.lng.toFixed(4)}°E</span>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => setGuestAddress(null)}
+                              className="shrink-0 text-primary hover:text-primary/90 hover:bg-primary/10 font-medium text-sm px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              Change
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Show form only if no guest address is set */}
+                    {(!user && !guestAddress) || user ? (
+                      <ShippingAddressForm 
+                        onSave={handleAddressSave} 
+                        fullName={user ? (user.user_metadata?.full_name || user.email?.split('@')[0] || '') : guestName}
+                      />
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -883,32 +934,16 @@ const CartPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span className={cn("font-medium", cart.shippingPrice === 0 && "text-primary")}>
-                      {cart.shippingPrice === 0 ? "Free" : formatCurrency(cart.shippingPrice || 0)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Promo Code */}
-                <div className="mt-4 pt-4 border-t border-border">
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <input 
-                        type="text"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        placeholder="Promo code" 
-                        className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      />
-                    </div>
-                    <button 
-                      onClick={handleApplyPromo}
-                      disabled={isApplyingPromo || !promoCode.trim()}
-                      className="px-4 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {isApplyingPromo ? '...' : 'Apply'}
-                    </button>
+                    {isCalculatingShipping ? (
+                      <span className="flex items-center gap-2 font-medium text-muted-foreground">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Calculating...
+                      </span>
+                    ) : (
+                      <span className={cn("font-medium", cart.shippingPrice === 0 && "text-primary")}>
+                        {cart.shippingPrice === 0 ? "Free" : formatCurrency(cart.shippingPrice || 0)}
+                      </span>
+                    )}
                   </div>
                 </div>
 

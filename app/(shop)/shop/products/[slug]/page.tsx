@@ -2,6 +2,7 @@ import {
     getProductBySlug, 
     getRelatedProductsByCategory 
 } from "@/lib/actions/product.actions";
+import { getReviewStats } from "@/lib/actions/review.actions";
 import { cache } from 'react';
 import ProductClientPage from "@/components/layout/shop/product-client-page";
 
@@ -45,16 +46,23 @@ export default async function ProductDetails({
 
     if (!product) return <div>Product not found</div>;
 
-    // Fetch related products (could be parallelized if we had category upfront)
-    const relatedProducts = await getRelatedProductsByCategory({
-        category: product.category,
-        productId: product._id.toString(),
-        limit: 4,
-        page: Number(page) || 1
-    });
+    // Fetch related products and review stats in parallel
+    const [relatedProducts, reviewStatsResult] = await Promise.all([
+        getRelatedProductsByCategory({
+            category: product.category,
+            productId: product._id.toString(),
+            limit: 4,
+            page: Number(page) || 1
+        }),
+        getReviewStats(product._id.toString())
+    ]);
 
     // Render the Client Component and pass data as props
     return (
-        <ProductClientPage product={product} relatedProducts={relatedProducts.data}/>
+        <ProductClientPage 
+            product={product} 
+            relatedProducts={relatedProducts.data}
+            reviewStats={reviewStatsResult.success ? reviewStatsResult.data : undefined}
+        />
     );
 }

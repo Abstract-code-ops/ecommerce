@@ -31,6 +31,8 @@ interface OrderConfirmationEmailProps {
   total: number;
   shippingAddress: ShippingAddress;
   paymentMethod?: string;
+  orderStatus?: string;
+  trackingNumber?: string;
 }
 
 export const OrderConfirmationEmail: React.FC<OrderConfirmationEmailProps> = ({

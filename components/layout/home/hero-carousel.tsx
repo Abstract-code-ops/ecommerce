@@ -73,8 +73,8 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
             fill
             className="object-cover"
             priority={index === 0}
+            loading={index === 0 ? 'eager' : 'lazy'}
             sizes="100vw"
-            unoptimized
           />
           
           {/* Clickable Link Overlay */}

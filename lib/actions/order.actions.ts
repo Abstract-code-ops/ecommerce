@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { connectToDB } from '@/lib/db'
 import Product from '@/lib/db/models/product.model'
 import { 
@@ -18,10 +19,147 @@ import { revalidatePath } from 'next/cache'
 import { OrderItem } from "@/types";
 import { round2Decimals } from "../utils";
 import { Resend } from 'resend';
-import { OrderConfirmationEmail } from '@/components/emails/order-confirmation-email';
+import { OrderStatusEmail } from '@/components/emails/orderStatusEmail';
 import React from 'react';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function sendOrderUpdateEmail(
+  orderId: string,
+  emailType: 'confirmation' | 'status_update' | 'cancellation',
+  additionalData?: {
+    newStatus?: string
+    trackingNumber?: string
+    estimatedDelivery?: string
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabaseAdmin = createAdminClient()
+    
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('id', orderId)
+      .single()
+    
+    if (orderError || !order) {
+      console.error('Error fetching order for email:', orderError)
+      return { success: false, error: 'Order not found' }
+    }
+    
+    // Resolve recipient email
+    let recipientEmail: string | null = null
+    let customerName: string = order.shipping_address?.fullName || 'Customer'
+    
+    if (order.user_id) {
+      // Authenticated user - fetch name from profiles table and email from auth
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('full_name')
+        .eq('id', order.user_id)
+        .single()
+      
+      if (profile?.full_name) {
+        customerName = profile.full_name
+      }
+      
+      // Get email from Supabase Auth
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(order.user_id)
+      
+      if (authError) {
+        console.error('Error fetching auth user for email:', authError)
+      }
+      
+      if (authData?.user?.email) {
+        recipientEmail = authData.user.email
+      }
+    } else {
+      // Guest order - use guest_email from order
+      recipientEmail = order.guest_email
+    }
+    
+    if (!recipientEmail) {
+      console.error('No recipient email found for order:', orderId)
+      return { success: false, error: 'No recipient email available' }
+    }
+    
+    const appName = process.env.NEXT_PUBLIC_APP_NAME || 'Global Edge'
+    
+    // Prepare email based on type
+    let subject: string;
+    let emailContent: React.ReactElement;
+
+    const commonProps = {
+      customerName,
+      orderNumber: order.order_number,
+      items: order.order_items.map((item: any) => ({
+        name: item.product_snapshot.name,
+        quantity: item.quantity,
+        totalPrice: item.total_price_cents / 100,
+        size: item.size,
+      })),
+      total: order.total_cents / 100,
+      shippingAddress: order.shipping_address,
+    };
+    
+    switch (emailType) {
+      case 'confirmation':
+        subject = `Order Confirmed - ${order.order_number}`;
+        emailContent = React.createElement(OrderStatusEmail, {
+          ...commonProps,
+          statusTitle: "Thanks for your order.",
+          statusDescription: "We've received your order and are getting it ready for shipment.",
+        });
+        break;
+
+      case 'status_update':
+        const isShipped = additionalData?.newStatus === 'shipped';
+        subject = isShipped ? `Your order is on the way!` : `Order Update - ${order.order_number}`;
+        emailContent = React.createElement(OrderStatusEmail, {
+          ...commonProps,
+          statusTitle: isShipped ? "Your order has shipped." : `Order Status: ${additionalData?.newStatus}`,
+          statusDescription: isShipped 
+            ? "Great news! Your package is with our courier and will be with you shortly."
+            : `Your order status has been updated to: ${additionalData?.newStatus}.`,
+          trackingNumber: additionalData?.trackingNumber,
+        });
+        break;
+
+      case 'cancellation':
+        subject = `Order Cancelled - ${order.order_number}`;
+        emailContent = React.createElement(OrderStatusEmail, {
+          ...commonProps,
+          statusTitle: "Order Cancelled",
+          statusDescription: "Your order has been successfully cancelled. If you were charged, a refund will be processed automatically.",
+          accentColor: "#FF0000",
+        });
+        break;
+        
+      default:
+        return { success: false, error: 'Invalid email type' };
+}
+    
+    // Send email via Resend
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || `${appName} <onboarding@resend.dev>`,
+      to: recipientEmail,
+      subject,
+      react: emailContent,
+    })
+    
+    if (emailError) {
+      console.error('Resend API error:', emailError)
+      return { success: false, error: emailError.message }
+    }
+    
+    console.log(`${emailType} email sent to:`, recipientEmail, 'Email ID:', emailData?.id)
+    return { success: true }
+    
+  } catch (error) {
+    console.error('Error sending order email:', error)
+    return { success: false, error: 'Failed to send email' }
+  }
+}
 
 /**
  * Calculate order pricing including tax and shipping
@@ -314,15 +452,17 @@ export async function createOrder(orderData: {
   guestEmail?: string  // For guest checkout
 }): Promise<{
   success: boolean
-  data?: { orderId: string; orderNumber: string }
+  data?: { orderId: string; orderNumber: string; isGuest: boolean }
   error?: string
   outOfStockItems?: Array<{ name: string; available: number; requested: number }>
 }> {
   try {
+    // Use regular client to check user authentication
     const supabase = await createClient()
-    
     const { data: { user } } = await supabase.auth.getUser()
-    // Allow guest checkout - user can be null
+    
+    // Use admin client for order insertion (bypasses RLS - correct for server-side operations)
+    const supabaseAdmin = createAdminClient()
 
     // Validate stock availability before creating order
     await connectToDB()
@@ -355,24 +495,33 @@ export async function createOrder(orderData: {
     const total = orderData.subtotal + orderData.shipping + orderData.tax - (orderData.discount || 0)
     const orderNumber = generateOrderNumber()
 
-    // Create the order first
-    const { data: order, error: orderError } = await supabase
+    // Prepare order data
+    const orderInsertData = {
+      user_id: user?.id || null,  // Allow null for guest orders
+      order_number: orderNumber,
+      status: 'pending',
+      subtotal_cents: currencyToCents(orderData.subtotal),
+      shipping_cents: currencyToCents(orderData.shipping),
+      tax_cents: currencyToCents(orderData.tax),
+      discount_cents: currencyToCents(orderData.discount || 0),
+      total_cents: currencyToCents(total),
+      shipping_address: orderData.shippingAddress,
+      billing_address: orderData.billingAddress || null,
+      payment_method: orderData.paymentMethod,
+      payment_status: 'pending',
+      guest_email: !user ? orderData.guestEmail : null,  // Store guest email if not logged in
+    } as OrderInsert
+
+    // DEBUG: Log what we're trying to insert
+    console.log('=== ORDER INSERT DEBUG ===')
+    console.log('User authenticated:', !!user)
+    console.log('User ID:', user?.id || 'null')
+    console.log('Guest Email:', orderInsertData.guest_email)
+    console.log('Order Data:', JSON.stringify(orderInsertData, null, 2))
+    console.log('============ using ADMIN client (bypasses RLS)')
+    const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .insert({
-        user_id: user?.id || null,  // Allow null for guest orders
-        order_number: orderNumber,
-        status: 'pending',
-        subtotal_cents: currencyToCents(orderData.subtotal),
-        shipping_cents: currencyToCents(orderData.shipping),
-        tax_cents: currencyToCents(orderData.tax),
-        discount_cents: currencyToCents(orderData.discount || 0),
-        total_cents: currencyToCents(total),
-        shipping_address: orderData.shippingAddress,
-        billing_address: orderData.billingAddress || null,
-        payment_method: orderData.paymentMethod,
-        payment_status: 'pending',
-        guest_email: !user ? orderData.guestEmail : null,  // Store guest email if not logged in
-      } as OrderInsert)
+      .insert(orderInsertData)
       .select('id, order_number')
       .single()
 
@@ -381,7 +530,7 @@ export async function createOrder(orderData: {
       return { success: false, error: orderError?.message || 'Failed to create order' }
     }
 
-    // Create order items with product snapshots
+    // Create order items with product snapshots using ADMIN client
     const orderItems: OrderItemInsert[] = orderData.items.map(item => ({
       order_id: order.id,
       mongo_product_id: item.mongoProductId || null,
@@ -393,14 +542,14 @@ export async function createOrder(orderData: {
       color: item.color || null,
     }))
 
-    const { error: itemsError } = await supabase
+    const { error: itemsError } = await supabaseAdmin
       .from('order_items')
       .insert(orderItems)
 
     if (itemsError) {
       console.error('Error creating order items:', itemsError)
-      // Rollback: delete the order
-      await supabase.from('orders').delete().eq('id', order.id)
+      // Rollback: delete the order using admin client
+      await supabaseAdmin.from('orders').delete().eq('id', order.id)
       return { success: false, error: itemsError.message }
     }
 
@@ -429,67 +578,7 @@ export async function createOrder(orderData: {
 
     // Send order confirmation email
     try {
-      // Get customer email - from user profile or guest email
-      let customerEmail: string | null = null;
-      let customerName: string = orderData.shippingAddress.fullName;
-
-      if (user) {
-        // Get user email from Supabase auth
-        customerEmail = user.email || null;
-      } else {
-        // Use guest email for non-authenticated orders
-        customerEmail = orderData.guestEmail || null;
-      }
-
-      if (customerEmail) {
-        const appName = process.env.NEXT_PUBLIC_APP_NAME || 'Global Edge';
-        
-        const { data: emailData, error: emailError } = await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL || `${appName} <onboarding@resend.dev>`,
-          to: customerEmail,
-          subject: `Order Confirmed - ${order.order_number} | ${appName}`,
-          react: React.createElement(OrderConfirmationEmail, {
-            customerName: customerName,
-            orderNumber: order.order_number,
-            orderDate: new Date().toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            }),
-            items: orderData.items.map(item => ({
-              name: item.productSnapshot.name,
-              image: item.productSnapshot.image,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              totalPrice: item.unitPrice * item.quantity,
-              size: item.size,
-              color: item.color,
-            })),
-            subtotal: orderData.subtotal,
-            shipping: orderData.shipping,
-            tax: orderData.tax,
-            discount: orderData.discount || 0,
-            total: total,
-            shippingAddress: {
-              fullName: orderData.shippingAddress.fullName,
-              street: orderData.shippingAddress.street,
-              city: orderData.shippingAddress.city,
-              emirate: orderData.shippingAddress.emirate,
-              country: orderData.shippingAddress.country,
-              phone: orderData.shippingAddress.phone,
-            },
-            paymentMethod: orderData.paymentMethod,
-          }),
-        });
-
-        if (emailError) {
-          console.error('Resend API error:', emailError);
-        } else {
-          console.log('Order confirmation email sent to:', customerEmail, 'Email ID:', emailData?.id);
-        }
-      } else {
-        console.log('No customer email available for order confirmation');
-      }
+      await sendOrderUpdateEmail(order.id, 'confirmation')
     } catch (emailError) {
       console.error('Error sending order confirmation email (order still created):', emailError);
       // Note: We don't rollback the order here - email sending is secondary
@@ -504,7 +593,8 @@ export async function createOrder(orderData: {
       success: true, 
       data: { 
         orderId: order.id, 
-        orderNumber: order.order_number 
+        orderNumber: order.order_number,
+        isGuest: !user  // Flag to indicate if this is a guest order
       } 
     }
   } catch (error) {
@@ -577,6 +667,14 @@ export async function cancelOrder(orderId: string): Promise<{
     } catch (stockError) {
       console.error('Error restoring stock (order still cancelled):', stockError)
       // Note: Order is still cancelled, stock restoration failed
+    }
+
+    // Send cancellation email
+    try {
+      await sendOrderUpdateEmail(orderId, 'cancellation')
+    } catch (emailError) {
+      console.error('Error sending cancellation email (order still cancelled):', emailError)
+      // Note: Order is still cancelled, email sending is secondary
     }
 
     revalidatePath('/orders')

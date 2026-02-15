@@ -7,7 +7,7 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { IProduct } from "@/lib/db/models/product.model";
 import AddToCartButton from "./addToCart";
 import useWishlistStore from "@/lib/hooks/useWishlistStore";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 // --- Premium Product Card System ---
 
@@ -68,7 +68,7 @@ export function ProductCard({
         )}>
             {/* Image Container */}
             <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-                <Link href={`/shop/products/${product.slug}`} className="block h-full">
+                <Link href={`/shop/products/${product.slug}`} className="block h-full relative z-0">
                     <Image
                         src={product.images[0]}
                         alt={product.name}
@@ -81,7 +81,7 @@ export function ProductCard({
                 </Link>
                 
                 {/* Badges */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+                <div className="absolute top-3 left-3 flex flex-col gap-2 z-10 pointer-events-none">
                     {isDeal && discountPercent > 0 && (
                         <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase bg-destructive text-white rounded">
                             -{discountPercent}%
@@ -114,7 +114,7 @@ export function ProductCard({
                 </button>
 
                 {/* Quick Add - Shows on hover */}
-                <div className="absolute inset-x-4 bottom-4 opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-300 z-10">
+                <div className="absolute inset-x-4 bottom-4 opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-300 z-10 pointer-events-none group-hover:pointer-events-auto">
                     <AddToCartButton
                         className="w-full text-xs font-medium py-3 px-4 rounded-lg shadow-lg backdrop-blur-sm"
                         price={product.price}
@@ -138,8 +138,8 @@ export function ProductCard({
                     />
                 </div>
                 
-                {/* Subtle overlay on hover */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+                {/* Subtle overlay on hover (non-interactive so image/link remains clickable) */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 pointer-events-none" />
             </div>
 
             {/* Content */}
@@ -157,7 +157,7 @@ export function ProductCard({
                 </Link>
 
                 {/* Rating */}
-                {showBottom && product.avgRating !== undefined && product.avgRating > 0 && (
+                {showBottom && product.reviewStats && product.reviewStats.average > 0 && (
                     <div className="flex items-center gap-1.5">
                         <div className="flex">
                             {[...Array(5)].map((_, i) => (
@@ -165,7 +165,7 @@ export function ProductCard({
                                     key={i}
                                     className={cn(
                                         "w-3.5 h-3.5",
-                                        i < Math.floor(product.avgRating || 0)
+                                        i < Math.floor(product.reviewStats?.average || 0)
                                             ? "fill-amber-400 text-amber-400"
                                             : "text-border fill-transparent"
                                     )}
@@ -173,7 +173,7 @@ export function ProductCard({
                             ))}
                         </div>
                         <span className="text-xs text-muted-foreground">
-                            ({product.numReviews || 0})
+                            ({product.reviewStats?.count || 0})
                         </span>
                     </div>
                 )}
