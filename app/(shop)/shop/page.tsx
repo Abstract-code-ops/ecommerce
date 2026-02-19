@@ -44,12 +44,26 @@ const features = [
 ]
 
 export default async function Page() {
-    const [bestSelling, featuredProducts, newArrivals, dbBanners] = await Promise.all([
+    const [bestSelling, featuredProducts, newArrivalsA, newArrivalsB, dbBanners] = await Promise.all([
         getProductByTag({tag: 'best-seller'}),
         getFeaturedProducts(),
         getProductByTag({tag: 'new-arrival'}),
+        getProductByTag({tag: 'New Arrivals'}),
         getBanners()
     ]);
+
+    // Merge products from both tag variants and dedupe by `slug` (fallback to `id`)
+    const newArrivals = (() => {
+        const map = new Map();
+        const listA = Array.isArray(newArrivalsA) ? newArrivalsA : [];
+        const listB = Array.isArray(newArrivalsB) ? newArrivalsB : [];
+        for (const p of [...listA, ...listB]) {
+            if (!p) continue;
+            const key = p.slug ?? JSON.stringify(p);
+            if (!map.has(key)) map.set(key, p);
+        }
+        return Array.from(map.values());
+    })();
 
     const carouselItems = dbBanners.length > 0 
         ? dbBanners.map(b => ({
