@@ -90,7 +90,13 @@ export default async function Page() {
             buttonCaption: b.button_caption,
             isPublished: b.is_active
         }))
-        : data.carousels;
+        : data.carousels.map(c => ({
+            ...c,
+            subtitle: null as string | null | undefined,
+            imageUrlTablet: null as string | null | undefined,
+            imageUrlMobile: null as string | null | undefined,
+            imagePosition: 'right' as 'left' | 'right',
+        }));
 
     // Pick the first active banner that has both desktop & mobile images
     // for the premium Hero Section; fall back to first carousel item otherwise
