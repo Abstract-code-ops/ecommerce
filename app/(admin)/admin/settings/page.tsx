@@ -28,16 +28,19 @@ import {
   Receipt,
   MailOpen,
   Settings2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Boxes
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import BannersTab from './banners-tab'
+import CategoryImagesTab from './category-images-tab'
 import { LocationPickerModal } from '@/components/shared/location-picker'
 
 // Settings navigation
 const settingsSections = [
   { id: 'general', name: 'General', icon: Store, description: 'Store name, contact info, address' },
-  { id: 'banners', name: 'Storefront', icon: ImageIcon, description: 'Manage home page banners' },
+  { id: 'banners', name: 'Hero Banners', icon: ImageIcon, description: 'Manage homepage carousel banners' },
+  { id: 'categories', name: 'Category Images', icon: Boxes, description: 'Shop by category section images' },
   { id: 'payments', name: 'Payments', icon: CreditCard, description: 'Payment methods and gateways' },
   { id: 'shipping', name: 'Shipping', icon: Truck, description: 'Shipping zones and rates' },
   { id: 'notifications', name: 'Notifications', icon: Bell, description: 'Email and push notifications' },
@@ -179,6 +182,9 @@ export default function SettingsPage() {
         <div className="lg:col-span-3 space-y-6">
           {/* Banners Settings */}
           {activeSection === 'banners' && <BannersTab />}
+          
+          {/* Category Images Settings */}
+          {activeSection === 'categories' && <CategoryImagesTab />}
           
           {/* General Settings */}
           {activeSection === 'general' && (

@@ -1,10 +1,12 @@
 import ProductSlider from "@/components/layout/shop/product-slider"
 import { ProductCard } from "@/components/layout/shop/shop-card"
 import HeroCarousel from "@/components/layout/home/hero-carousel"
+import HeroSection from "@/components/layout/home/hero-section"
 import BrowsingHistoryList from "@/components/shared/browsing-history-list"
 import FadeInSection from "@/components/shared/fade-in-section"
 import { getProductByTag, getFeaturedProducts } from "@/lib/actions/product.actions"
 import { getBanners } from "@/lib/actions/banner.actions"
+import { getCategoryImages } from "@/lib/actions/storefront.actions"
 import data from "@/lib/data"
 import Link from "next/link"
 import Image from "next/image"
@@ -14,8 +16,8 @@ import { ArrowRight, Leaf, Truck, RefreshCw, Shield } from "lucide-react"
 // Increase revalidation time for better caching (5 minutes)
 export const revalidate = 300;
 
-// Define categories for navigation with images
-const categories = [
+// Default/fallback categories for navigation with images
+const defaultCategories = [
     { 
         name: "Paper Bags", 
         href: "/shop/products?category=Paperbags", 
@@ -44,12 +46,13 @@ const features = [
 ]
 
 export default async function Page() {
-    const [bestSelling, featuredProducts, newArrivalsA, newArrivalsB, dbBanners] = await Promise.all([
+    const [bestSelling, featuredProducts, newArrivalsA, newArrivalsB, dbBanners, dbCategoryImages] = await Promise.all([
         getProductByTag({tag: 'best-seller'}),
         getFeaturedProducts(),
         getProductByTag({tag: 'new-arrival'}),
         getProductByTag({tag: 'New Arrivals'}),
-        getBanners()
+        getBanners(),
+        getCategoryImages()
     ]);
 
     // Merge products from both tag variants and dedupe by `slug` (fallback to `id`)
@@ -65,21 +68,55 @@ export default async function Page() {
         return Array.from(map.values());
     })();
 
+    // Use database category images if available, otherwise fall back to default
+    const categories = dbCategoryImages.length > 0 
+        ? dbCategoryImages.map(cat => ({
+            name: cat.name,
+            href: cat.link_url,
+            description: cat.description,
+            image: cat.image_url
+        }))
+        : defaultCategories;
+
     const carouselItems = dbBanners.length > 0 
         ? dbBanners.map(b => ({
             title: b.title,
+            subtitle: b.subtitle,
             imageUrl: b.image_url,
+            imageUrlTablet: b.image_url_tablet,
+            imageUrlMobile: b.image_url_mobile,
+            imagePosition: b.image_position || 'right',
             href: b.link_url || '#',
             buttonCaption: b.button_caption,
             isPublished: b.is_active
         }))
         : data.carousels;
 
+    // Pick the first active banner that has both desktop & mobile images
+    // for the premium Hero Section; fall back to first carousel item otherwise
+    const heroBanner = carouselItems.find(
+        (item) =>
+            item.isPublished !== false &&
+            item.imageUrl &&
+            item.imageUrlMobile
+    ) ?? carouselItems[0] ?? null;
+
     return (
         <div className="flex flex-col">
             {/* Hero Section */}
-            <section className="relative">
-                <HeroCarousel items={carouselItems} />
+            <section>
+                {heroBanner?.imageUrlMobile ? (
+                    <HeroSection
+                        title={heroBanner.title || 'Global Edge Shop'}
+                        subtitle={heroBanner.subtitle ?? undefined}
+                        buttonCaption={heroBanner.buttonCaption || 'Shop Now'}
+                        href={heroBanner.href || '/shop/products'}
+                        desktopImageUrl={heroBanner.imageUrl}
+                        mobileImageUrl={heroBanner.imageUrlMobile}
+                    />
+                ) : (
+                    <HeroCarousel items={carouselItems} />
+                )}
             </section>
 
             {/* Trust Badges */}

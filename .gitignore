@@ -41,13 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # documentation guides (keep README.md)
-*_IMPLEMENTATION.md
-*_SETUP.md
-*_SUMMARY.md
-*_REFERENCE.md
-*_QUICK_REFERENCE.md
-FIX_*.md
-CART_*.md
-SHIPPING_*.md
-GUEST_*.md
-SUPABASE_*.md
+
+# Ignore all Markdown files except the main README
+*.md
+!README.md

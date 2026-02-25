@@ -4,13 +4,18 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface HeroCarouselProps {
   items: {
     title?: string
+    subtitle?: string | null
     buttonCaption?: string
     imageUrl: string
+    imageUrlTablet?: string | null
+    imageUrlMobile?: string | null
+    imagePosition?: 'left' | 'right'
     href: string
     isPublished?: boolean
   }[]
@@ -52,9 +57,12 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
   const currentItem = publishedItems[currentIndex]
 
   return (
-    <div className="relative w-full h-[70vh] md:h-[80vh] lg:h-[85vh] overflow-hidden bg-muted">
+    <div className="relative w-full overflow-hidden bg-muted h-[70vh] md:h-[80vh] lg:h-[600px] xl:h-[700px] 2xl:h-[800px]">
       {/* Slides */}
-      {publishedItems.map((item, index) => (
+      {publishedItems.map((item, index) => {
+        const imageOnLeft = item.imagePosition === 'left'
+        
+        return (
         <div
           key={index}
           className={cn(
@@ -66,23 +74,84 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
             index === currentIndex && isAnimating && direction === 'left' && "animate-slide-in-left"
           )}
         >
-          {/* Background Image */}
-          <Image
-            src={item.imageUrl}
-            alt={item.title || 'Hero image'}
-            fill
-            className="object-cover"
-            priority={index === 0}
-            loading={index === 0 ? 'eager' : 'lazy'}
-            sizes="100vw"
-          />
-          
-          {/* Clickable Link Overlay */}
-          <Link href={item.href} className="absolute inset-0 z-[5]">
-            <span className="sr-only">View {item.title || 'collection'}</span>
-          </Link>
+          {/* Desktop: Split Layout */}
+          <div className="hidden lg:grid lg:grid-cols-2 h-full">
+            {/* Text Side */}
+            <div className={cn(
+              "flex flex-col justify-center px-12 xl:px-20 bg-background",
+              imageOnLeft ? "order-2" : "order-1"
+            )}>
+              <div className="max-w-2xl">
+                {item.title && (
+                  <h1 className="text-5xl xl:text-6xl 2xl:text-7xl font-bold text-foreground mb-6 xl:mb-8 font-spectral leading-tight tracking-tight">
+                    {item.title}
+                  </h1>
+                )}
+                {item.subtitle && (
+                  <p className="text-xl xl:text-2xl 2xl:text-3xl text-muted-foreground mb-10 xl:mb-12 leading-relaxed font-light">
+                    {item.subtitle}
+                  </p>
+                )}
+                <Link href={item.href}>
+                  <Button size="lg" className="text-base xl:text-lg px-10 py-7 xl:px-12 xl:py-8 rounded-none font-semibold tracking-wide hover:scale-105 transition-transform duration-300">
+                    {item.buttonCaption || 'Shop Now'}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Image Side */}
+            <div className={cn(
+              "relative h-full",
+              imageOnLeft ? "order-1" : "order-2"
+            )}>
+              <Image
+                src={item.imageUrl}
+                alt={item.title || 'Hero image'}
+                fill
+                className="object-cover"
+                priority={index === 0}
+                loading={index === 0 ? 'eager' : 'lazy'}
+                sizes="50vw"
+              />
+            </div>
+          </div>
+
+          {/* Tablet & Mobile: Full Image with Button */}
+          <div className="lg:hidden relative h-full">
+            <picture>
+              {item.imageUrlMobile && (
+                <source media="(max-width: 767px)" srcSet={item.imageUrlMobile} />
+              )}
+              {item.imageUrlTablet && (
+                <source media="(min-width: 768px)" srcSet={item.imageUrlTablet} />
+              )}
+              <Image
+                src={item.imageUrl}
+                alt={item.title || 'Hero image'}
+                fill
+                className="object-cover"
+                priority={index === 0}
+                loading={index === 0 ? 'eager' : 'lazy'}
+                sizes="100vw"
+              />
+            </picture>
+            
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            
+            {/* Button at Bottom */}
+            <div className="absolute bottom-8 md:bottom-12 left-0 right-0 flex justify-center px-4">
+              <Link href={item.href}>
+                <Button size="lg" className="text-base md:text-lg px-10 py-7 md:px-12 md:py-8 rounded-none font-semibold tracking-wide shadow-2xl hover:scale-105 transition-transform duration-300">
+                  {item.buttonCaption || 'Shop Now'}
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
-      ))}
+      )})}
+
 
       {/* Navigation Arrows */}
       {publishedItems.length > 1 && (
