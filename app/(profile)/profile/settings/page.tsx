@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { 
-  Lock, Bell, Eye, Globe, Moon, Sun, Trash2, 
+  Lock, Bell, Eye, Trash2, 
   Shield, Smartphone, Mail, Loader2, AlertTriangle,
   ChevronRight, Check
 } from 'lucide-react'

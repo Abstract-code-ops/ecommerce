@@ -82,14 +82,14 @@ const SignInPage = () => {
 
   return (
     <div
-    className="flex h-auto min-h-screen items-center justify-center overflow-x-hidden bg-[url('https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/auth/auth-background-2.png')] bg-cover bg-center bg-no-repeat py-10"
+    className="flex h-auto min-h-screen items-center justify-center overflow-x-hidden bg-[#F9FAF7] py-10"
   >
       <Link
         href="/shop"
-        className="absolute left-4 top-4 inline-flex items-center gap-2 px-3 py-1.5 bg-card/95 border border-border rounded-md shadow-sm transition-transform duration-200 hover:translate-x-0.5 hover:bg-primary hover:text-primary-foreground"
+        className="absolute left-4 top-4 inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#E5E7EB] text-[#1B3022] rounded-full shadow-sm transition-all duration-200 hover:bg-[#9DBE91] hover:text-white hover:border-[#9DBE91] uppercase tracking-wider text-sm font-medium"
       >
         <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" />
-        <span className="text-sm font-medium">Back to Shop</span>
+        <span>Back to Shop</span>
       </Link>
       <div className="relative flex items-center justify-center px-4 sm:px-6 lg:px-8">
       {/* <div className="absolute">
@@ -125,22 +125,22 @@ const SignInPage = () => {
           </defs>
         </svg>
       </div> */}
-      <div className="bg-base-100 shadow-base-300/20 z-1 w-full space-y-6 rounded-xl p-6 shadow-md sm:min-w-md lg:p-8">
+      <div className="bg-white z-1 w-full space-y-6 rounded-3xl p-6 shadow-lg sm:min-w-md lg:p-8">
         <div className="flex items-center justify-center gap-3">
           <Image src="/images/logo-full.png" alt="logo" width={120} height={110} />
         </div>
         <div>
-          <h3 className="mb-1.5 text-2xl text-center font-semibold">Welcome Back</h3>
-          <p className="text-black/70 text-center">Enter your details to log in.</p>
+          <h3 className="mb-1.5 text-2xl text-center font-semibold text-[#1B3022]">Welcome Back</h3>
+          <p className="text-[#1B3022]/70 text-center">Enter your details to log in.</p>
         </div>
         <div className="space-y-4">
           <form className="mb-4 space-y-4" onSubmit={handleSignIn}>
             <div>
-              <label className="label-text" htmlFor="userEmail">Email address*</label>
+              <label className="label-text text-[#1B3022]" htmlFor="userEmail">Email address*</label>
               <input 
                 type="email" 
                 placeholder="Enter your email address" 
-                className="input" 
+                className="input bg-white border-[#E5E7EB] rounded-xl focus:border-[#9DBE91] focus:ring-[#9DBE91] placeholder:text-[#1B3022]/50" 
                 id="userEmail" 
                 required 
                 value={email}
@@ -148,8 +148,8 @@ const SignInPage = () => {
               />
             </div>
             <div>
-              <label className="label-text" htmlFor="userPassword">Password*</label>
-              <div className="input flex items-center">
+              <label className="label-text text-[#1B3022]" htmlFor="userPassword">Password*</label>
+              <div className="input bg-white border-[#E5E7EB] rounded-xl focus-within:border-[#9DBE91] focus-within:ring-1 focus-within:ring-[#9DBE91] flex items-center">
                 <input 
                   id="userPassword" 
                   type={showPassword ? 'text' : 'password'} 
@@ -165,31 +165,31 @@ const SignInPage = () => {
                   aria-label="Toggle password visibility"
                 >
                   {showPassword ? (
-                    <EyeOff className="size-5 shrink-0 text-black/50" />
+                    <EyeOff className="size-5 shrink-0 text-[#1B3022]/50" />
                   ) : (
-                    <Eye className="size-5 shrink-0 text-black/50" />
+                    <Eye className="size-5 shrink-0 text-[#1B3022]/50" />
                   )}
                 </button>
               </div>
             </div>
             <div className="flex items-center justify-between gap-y-2">
               <div className="flex items-center gap-2">
-                <input type="checkbox" className="checkbox checkbox-primary" id="rememberMe" />
-                <label className="label-text text-base-content/80 p-0 text-base" htmlFor="rememberMe">Remember Me</label>
+                <input type="checkbox" className="checkbox accent-[#9DBE91]" id="rememberMe" />
+                <label className="label-text text-[#1B3022]/80 p-0 text-base" htmlFor="rememberMe">Remember Me</label>
               </div>
-              <Link href="/forgot-password" className="link link-animated link-primary font-normal">Forgot Password?</Link>
+              <Link href="/forgot-password" className="text-[#9DBE91] hover:text-[#8AAE7E] font-normal transition-colors">Forgot Password?</Link>
             </div>
             <button 
-              className="btn btn-lg btn-primary btn-block"
+              className="btn btn-lg w-full bg-[#9DBE91] hover:bg-[#8AAE7E] text-white rounded-full uppercase tracking-wider font-medium border-none"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign in to GlobalEdge
             </button>
           </form>
-          <p className="text-sm sm:text-md text-base-content/80 mb-4 text-center">
+          <p className="text-sm sm:text-md text-[#1B3022]/80 mb-4 text-center">
             New on our platform?
-            <Link href="/sign-up" className="link animate-underline link-primary font-normal ml-2">Create an account</Link>
+            <Link href="/sign-up" className="text-[#9DBE91] hover:text-[#8AAE7E] font-normal ml-2 transition-colors">Create an account</Link>
           </p>
           {/* 
           <div className="divider">or</div>

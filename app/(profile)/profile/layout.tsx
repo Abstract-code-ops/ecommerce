@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { 
   User, MapPin, CreditCard, Package, 
-  Settings, LogOut, ChevronRight, ShoppingBag, RotateCcw
+  Settings, LogOut, ChevronRight, RotateCcw
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { cn } from '@/lib/utils'

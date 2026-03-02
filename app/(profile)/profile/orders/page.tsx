@@ -9,8 +9,8 @@ import { Separator } from '@/components/ui/separator'
 import { formatCurrency } from '@/lib/utils'
 import { 
   Package, Truck, CheckCircle2, Clock, ChevronRight, 
-  Search, Filter, Calendar, Eye, RotateCcw, Download,
-  MapPin, X, AlertCircle, Loader2, Camera, Upload
+  Search, Eye, RotateCcw, Download,
+  MapPin, X, AlertCircle, Loader2
 } from 'lucide-react'
 import { getOrders, cancelOrder } from '@/lib/actions/order.actions'
 import { createReturn, getReturns } from '@/lib/actions/return.actions'

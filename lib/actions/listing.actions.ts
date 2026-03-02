@@ -251,7 +251,8 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
     countInStock: 1,
     category: 1,
     dimensions: 1,
-    tags: 1
+    tags: 1,
+    pcs: 1
   };
 
   const [products, totalCount] = await Promise.all([

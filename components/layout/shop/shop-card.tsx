@@ -144,10 +144,17 @@ export function ProductCard({
 
             {/* Content */}
             <div className="flex flex-col p-4 gap-2 flex-1">
-                {/* Category */}
-                <span className="text-[11px] text-muted-foreground tracking-wider uppercase font-medium">
-                    {product.category}
-                </span>
+                {/* Category & Units Badge */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] text-muted-foreground tracking-wider uppercase font-medium">
+                        {product.category}
+                    </span>
+                    {product.pcs && (
+                        <span className="text-xs font-semibold bg-[#9DBE91]/15 text-[#1B3022] px-2 py-0.5 rounded-md border border-[#9DBE91]/20">
+                            {product.pcs} pcs/unit
+                        </span>
+                    )}
+                </div>
 
                 {/* Title */}
                 <Link href={`/shop/products/${product.slug}`} className="flex-1">

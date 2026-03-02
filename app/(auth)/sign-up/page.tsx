@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { motion } from 'framer-motion'
 import { 
-  Mail, Lock, Eye, EyeOff, ArrowRight, User, Loader2, ArrowLeft
+  Eye, EyeOff, User, Loader2, ArrowLeft, Mail, Lock, ArrowRight
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -136,13 +136,13 @@ const SignUpPage = () => {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Sign Up Form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-background relative">
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-[#F9FAF7] relative">
         <Link
           href="/shop"
-          className="absolute left-6 top-6 inline-flex items-center gap-2 px-3 py-1.5 bg-card/95 border border-border rounded-md shadow-sm transition-transform duration-200 hover:translate-x-0.5 hover:bg-primary hover:text-primary-foreground"
+          className="absolute left-6 top-6 inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#E5E7EB] text-[#1B3022] rounded-full shadow-sm transition-all duration-200 hover:bg-[#9DBE91] hover:text-white hover:border-[#9DBE91] uppercase tracking-wider text-sm font-medium"
         >
           <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" />
-          <span className="text-sm font-medium">Back to Shop</span>
+          <span>Back to Shop</span>
         </Link>
         <motion.div 
           className="w-full max-w-md"
@@ -156,10 +156,10 @@ const SignUpPage = () => {
           </div>
 
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">Create your account</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-2xl font-bold text-[#1B3022] mb-2">Create your account</h2>
+            <p className="text-[#1B3022]/70">
               Already have an account?{' '}
-              <Link href="/sign-in" className="text-primary hover:underline font-medium">
+              <Link href="/sign-in" className="text-[#9DBE91] hover:text-[#8AAE7E] font-medium transition-colors">
                 Sign in
               </Link>
             </p>
@@ -212,51 +212,51 @@ const SignUpPage = () => {
           {/* Registration Form */}
           <form onSubmit={handleSignUp} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Full Name</label>
+              <label className="text-sm font-medium text-[#1B3022]">Full Name</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B3022]/50" />
                 <Input
                   type="text"
                   name="fullName"
                   placeholder="John Doe"
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="pl-10 h-12"
+                  className="pl-10 h-12 bg-white border-[#E5E7EB] rounded-xl focus:border-[#9DBE91] focus:ring-[#9DBE91] placeholder:text-[#1B3022]/50"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Email</label>
+              <label className="text-sm font-medium text-[#1B3022]">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B3022]/50" />
                 <Input
                   type="email"
                   name="email"
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleChange}
-                  className="pl-10 h-12"
+                  className="pl-10 h-12 bg-white border-[#E5E7EB] rounded-xl focus:border-[#9DBE91] focus:ring-[#9DBE91] placeholder:text-[#1B3022]/50"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Password</label>
+              <label className="text-sm font-medium text-[#1B3022]">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B3022]/50" />
                 <Input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
-                  className="pl-10 pr-10 h-12"
+                  className="pl-10 pr-10 h-12 bg-white border-[#E5E7EB] rounded-xl focus:border-[#9DBE91] focus:ring-[#9DBE91] placeholder:text-[#1B3022]/50"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1B3022]/50 hover:text-[#1B3022] transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -282,21 +282,21 @@ const SignUpPage = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Confirm Password</label>
+              <label className="text-sm font-medium text-[#1B3022]">Confirm Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B3022]/50" />
                 <Input
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
                   placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="pl-10 pr-10 h-12"
+                  className="pl-10 pr-10 h-12 bg-white border-[#E5E7EB] rounded-xl focus:border-[#9DBE91] focus:ring-[#9DBE91] placeholder:text-[#1B3022]/50"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1B3022]/50 hover:text-[#1B3022] transition-colors"
                 >
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -312,19 +312,19 @@ const SignUpPage = () => {
                 type="checkbox"
                 checked={acceptedTerms}
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                className="mt-0.5 w-4 h-4 rounded border-[#E5E7EB] accent-[#9DBE91] focus:ring-[#9DBE91]"
               />
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-[#1B3022]/70">
                 I agree to the{' '}
-                <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>
+                <Link href="/terms" className="text-[#9DBE91] hover:text-[#8AAE7E] transition-colors">Terms of Service</Link>
                 {' '}and{' '}
-                <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+                <Link href="/privacy" className="text-[#9DBE91] hover:text-[#8AAE7E] transition-colors">Privacy Policy</Link>
               </span>
             </label>
 
             <Button
               type="submit"
-              className="w-full h-12 font-medium mt-2"
+              className="w-full h-12 font-medium mt-2 bg-[#9DBE91] hover:bg-[#8AAE7E] text-white rounded-full uppercase tracking-wider border-none"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -341,7 +341,7 @@ const SignUpPage = () => {
       </div>
 
       {/* Right Panel - Decorative */}
-      <div className="hidden lg:flex justify-end lg:w-1/2 bg-linear-to-l from-black/90 via-black to-black/80 relative overflow-hidden">
+      <div className="hidden lg:flex justify-end lg:w-1/2 bg-linear-to-l from-[#1B3022] via-[#1B3022]/95 to-[#1B3022]/90 relative overflow-hidden">
         {/* Background image instead of animated shapes. Add your image at `public/images/gift-products.jpg` */}
         <div className="absolute inset-0">
           <img

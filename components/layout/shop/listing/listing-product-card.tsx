@@ -116,9 +116,21 @@ export default function ListingProductCard({ product, className }: ListingProduc
           </h3>
         </Link>
 
+        {/* Category & Pcs Badge */}
+        <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+          {product.category && (
+            <span className="text-xs text-stone-500">{product.category}</span>
+          )}
+          {product.pcs && (
+            <span className="text-xs font-semibold bg-[#9DBE91]/15 text-[#1B3022] px-2 py-0.5 rounded-md border border-[#9DBE91]/20">
+              {product.pcs} pcs/unit
+            </span>
+          )}
+        </div>
+
         {/* Dimensions */}
         {product.dimensions && (
-          <p className="mt-1.5 text-xs text-stone-400">
+          <p className="mt-1 text-xs text-stone-400">
             {product.dimensions.width} × {product.dimensions.height} × {product.dimensions.depth} cm
           </p>
         )}

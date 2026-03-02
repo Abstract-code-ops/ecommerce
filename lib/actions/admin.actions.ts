@@ -295,10 +295,13 @@ export async function updateProduct(productId: string, data: Partial<IProduct>) 
 
     await connectToDB()
 
+    // Log what we're receiving
+    console.log('updateProduct called with pcs:', data.pcs)
+
     const product = await Product.findByIdAndUpdate(
       productId,
-      { ...data, updatedAt: new Date() },
-      { new: true }
+      { $set: { ...data, updatedAt: new Date() } },
+      { new: true, runValidators: false }
     )
 
     if (!product) {
@@ -306,6 +309,7 @@ export async function updateProduct(productId: string, data: Partial<IProduct>) 
     }
 
     revalidatePath('/admin/products')
+    revalidatePath(`/admin/products/${productId}`)
     revalidatePath(`/shop/products/${product.slug}`)
     return { success: true, data: serialize(product) }
   } catch (error) {
@@ -349,6 +353,8 @@ export async function createProduct(data: Partial<IProduct>) {
     const product = await Product.create(data)
 
     revalidatePath('/admin/products')
+    revalidatePath(`/admin/products/${product._id}`)
+    revalidatePath('/shop')
     return { success: true, data: serialize(product) }
   } catch (error) {
     console.error('Error creating product:', error)
@@ -398,7 +404,7 @@ export async function getAdminOrders(options?: {
 
     // Get user profiles for orders with user_id
     const userIds = [...new Set(data?.filter(o => o.user_id).map(o => o.user_id) || [])]
-    let profilesMap: Record<string, any> = {}
+    const profilesMap: Record<string, any> = {}
     
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
@@ -412,7 +418,7 @@ export async function getAdminOrders(options?: {
     }
 
     // Get auth users for email addresses
-    let usersMap: Record<string, any> = {}
+    const usersMap: Record<string, any> = {}
     if (userIds.length > 0) {
       const { data: authData } = await supabase.auth.admin.listUsers()
       authData?.users?.forEach(u => {
@@ -718,7 +724,7 @@ export async function getAdminCustomers(options?: {
     const offset = (page - 1) * limit
 
     // Get profiles with order stats
-    let query = supabase
+    const query = supabase
       .from('profiles')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
@@ -732,7 +738,7 @@ export async function getAdminCustomers(options?: {
     const userIds = profiles?.map(p => p.id) || []
     
     // Get emails from auth.users
-    let emailsMap: Record<string, string> = {}
+    const emailsMap: Record<string, string> = {}
     if (userIds.length > 0) {
       const { data: authData } = await supabase.auth.admin.listUsers()
       if (authData?.users) {

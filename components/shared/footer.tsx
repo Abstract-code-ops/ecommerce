@@ -1,9 +1,7 @@
 'use client'
 import React from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
-import { ChevronUp, Mail, Phone, MapPin, Instagram, Facebook, Twitter } from 'lucide-react'
-import { App_NAME } from '@/lib/constants'
+import { ChevronUp, Mail, Phone, Instagram, Facebook, Twitter } from 'lucide-react'
 
 const Footer = () => {
   const currentYear = new Date().getFullYear()
@@ -33,7 +31,7 @@ const Footer = () => {
   }
 
   return (
-    <footer className="bg-primary text-primary-foreground">
+    <footer className="bg-[#1B3022] text-white">
       {/* Back to Top Button */}
       <div className="border-b border-white/10">
         <button
@@ -51,40 +49,32 @@ const Footer = () => {
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-6">
             <Link href="/shop" className="inline-flex items-center gap-3 group">
-              <Image
-                src="/images/logo-small.png"
-                alt={App_NAME}
-                width={48}
-                height={48}
-                className="object-contain brightness-0 invert transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
-              <span className="font-serif text-2xl">{App_NAME}</span>
+              <span className="font-bold text-2xl uppercase tracking-tight">GLOBAL EDGE</span>
             </Link>
-            <p className="text-primary-foreground/70 leading-relaxed max-w-sm">
+            <p className="text-white/70 leading-relaxed max-w-sm">
               Premium packaging solutions crafted with care. We believe in sustainable, 
               beautiful products that make a difference.
             </p>
             
             {/* Newsletter Signup */}
             <div className="space-y-3">
-              <h4 className="font-medium text-sm tracking-wide uppercase">
+              <h4 className="font-semibold text-sm tracking-widest uppercase">
                 Join Our Newsletter
               </h4>
               <form className="flex gap-2">
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-sm placeholder:text-primary-foreground/50 focus:outline-none focus:border-white/40 transition-colors"
+                  className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-full text-sm placeholder:text-white/50 focus:outline-none focus:border-[#9DBE91] transition-colors"
                 />
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-white text-primary font-medium text-sm rounded-lg hover:bg-white/90 transition-colors duration-200"
+                  className="px-6 py-3 bg-[#9DBE91] hover:bg-[#8AAE7E] text-white font-semibold text-sm rounded-full transition-all duration-200 hover:shadow-lg"
                 >
                   Subscribe
                 </button>
               </form>
-              <p className="text-xs text-primary-foreground/50">
+              <p className="text-xs text-white/50">
                 Get 10% off your first order when you subscribe.
               </p>
             </div>
@@ -92,13 +82,13 @@ const Footer = () => {
 
           {/* Shop Links */}
           <div className="space-y-5">
-            <h4 className="font-medium text-sm tracking-wide uppercase">Shop</h4>
+            <h4 className="font-semibold text-sm tracking-widest uppercase">Shop</h4>
             <ul className="space-y-3">
               {footerLinks.shop.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-primary-foreground/70 hover:text-primary-foreground transition-colors duration-200 text-sm"
+                    className="text-white/70 hover:text-white transition-colors duration-200 text-sm"
                   >
                     {link.name}
                   </Link>
@@ -109,13 +99,13 @@ const Footer = () => {
 
           {/* Support Links */}
           <div className="space-y-5">
-            <h4 className="font-medium text-sm tracking-wide uppercase">Support</h4>
+            <h4 className="font-semibold text-sm tracking-widest uppercase">Support</h4>
             <ul className="space-y-3">
               {footerLinks.support.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-primary-foreground/70 hover:text-primary-foreground transition-colors duration-200 text-sm"
+                    className="text-white/70 hover:text-white transition-colors duration-200 text-sm"
                   >
                     {link.name}
                   </Link>
@@ -126,13 +116,13 @@ const Footer = () => {
 
           {/* Company Links */}
           <div className="space-y-5">
-            <h4 className="font-medium text-sm tracking-wide uppercase">Company</h4>
+            <h4 className="font-semibold text-sm tracking-widest uppercase">Company</h4>
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-primary-foreground/70 hover:text-primary-foreground transition-colors duration-200 text-sm"
+                    className="text-white/70 hover:text-white transition-colors duration-200 text-sm"
                   >
                     {link.name}
                   </Link>
@@ -141,12 +131,12 @@ const Footer = () => {
             </ul>
             
             {/* Contact Info */}
-            <div className="pt-4 space-y-3 text-sm text-primary-foreground/70">
-              <a href="mailto:support@globaledgeshop.com" className="flex items-center gap-2 hover:text-primary-foreground transition-colors">
+            <div className="pt-4 space-y-3 text-sm text-white/70">
+              <a href="mailto:support@globaledgeshop.com" className="flex items-center gap-2 hover:text-white transition-colors">
                 <Mail className="h-4 w-4" />
                 support@globaledgeshop.com
               </a>
-              <a href="tel:+905338445788" className="flex items-center gap-2 hover:text-primary-foreground transition-colors">
+              <a href="tel:+905338445788" className="flex items-center gap-2 hover:text-white transition-colors">
                 <Phone className="w-4 h-4" />
                 +90 533 844 57 88
               </a>
@@ -160,8 +150,8 @@ const Footer = () => {
         <div className="container-premium py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Copyright */}
-            <p className="text-sm text-primary-foreground/60 text-center md:text-left">
-              © {currentYear} {App_NAME}. All rights reserved.
+            <p className="text-sm text-white/60 text-center md:text-left">
+              © {currentYear} Global Edge. All rights reserved.
             </p>
 
             {/* Social Links */}
@@ -196,11 +186,11 @@ const Footer = () => {
             </div>
 
             {/* Legal Links */}
-            <div className="flex items-center gap-6 text-sm text-primary-foreground/60">
-              <Link href="/privacy" className="hover:text-primary-foreground transition-colors">
+            <div className="flex items-center gap-6 text-sm text-white/60">
+              <Link href="/privacy" className="hover:text-white transition-colors">
                 Privacy
               </Link>
-              <Link href="/terms" className="hover:text-primary-foreground transition-colors">
+              <Link href="/terms" className="hover:text-white transition-colors">
                 Terms
               </Link>
             </div>
@@ -208,7 +198,7 @@ const Footer = () => {
 
           {/* Credit */}
           <div className="mt-6 pt-4 border-t border-white/5 text-center">
-            <p className="text-xs text-primary-foreground/40">
+            <p className="text-xs text-white/40">
               Crafted with care by GMQG
             </p>
           </div>

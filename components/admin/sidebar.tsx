@@ -9,14 +9,10 @@ import {
   ShoppingCart,
   Users,
   Settings,
-  Truck,
   RotateCcw,
-  Tag,
-  Bell,
   ChevronLeft,
   ChevronRight,
-  Store,
-  Boxes
+  Store
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 

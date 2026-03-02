@@ -14,7 +14,8 @@ const listProjection = {
     countInStock: 1,
     category: 1,
     dimensions: 1,
-    tags: 1
+    tags: 1,
+    pcs: 1
 };
 
 // Helper to serialize Mongoose documents to plain objects (handles ObjectId, Date, etc.)

@@ -1,12 +1,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 
 interface HeroSectionProps {
-  /** Headline text – rendered in serif (Spectral) */
+  /** Headline text – rendered in bold sans-serif */
   title: string
-  /** Supporting copy – rendered in sans-serif (Inter) */
+  /** Supporting copy */
   subtitle?: string
-  /** CTA label (defaults to "Shop Now") */
+  /** Primary CTA label (defaults to "Shop Now") */
   buttonCaption?: string
   /** CTA destination */
   href?: string
@@ -40,7 +41,7 @@ function withCloudinaryTransforms(url: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Component
+// Component - Premium Minimalist Hero Section
 // ---------------------------------------------------------------------------
 export default function HeroSection({
   title,
@@ -54,7 +55,7 @@ export default function HeroSection({
   const mobileSrc = withCloudinaryTransforms(mobileImageUrl)
 
   return (
-    <section className="relative w-full h-[80vh] overflow-hidden bg-neutral-950">
+    <section className="relative w-full min-h-[85vh] overflow-hidden bg-[#F9FAF7]">
       {/* ----------------------------------------------------------------- */}
       {/* ART DIRECTION — two <Image /> elements, toggled via Tailwind       */}
       {/* ----------------------------------------------------------------- */}
@@ -89,7 +90,7 @@ export default function HeroSection({
       <div
         className="
           absolute inset-0 md:hidden
-          bg-linear-to-b from-black/70 via-black/40 to-transparent
+          bg-gradient-to-b from-[#1B3022]/80 via-[#1B3022]/40 to-transparent
         "
         aria-hidden="true"
       />
@@ -100,7 +101,7 @@ export default function HeroSection({
       <div
         className="
           absolute inset-0 hidden md:block
-          bg-linear-to-r from-black/60 via-black/25 to-transparent
+          bg-gradient-to-r from-[#1B3022]/70 via-[#1B3022]/30 to-transparent
         "
         aria-hidden="true"
       />
@@ -108,18 +109,18 @@ export default function HeroSection({
       {/* ----------------------------------------------------------------- */}
       {/* TEXT CONTENT                                                        */}
       {/* ----------------------------------------------------------------- */}
-      <div className="relative z-10 flex h-full w-full">
+      <div className="relative z-10 flex h-full w-full min-h-[85vh]">
         {/* ----- Mobile: top-aligned, centred ----- */}
         <div
           className="
             flex md:hidden flex-col items-center text-center
-            w-full px-6 pt-20
+            w-full px-6 pt-24
           "
         >
           <h1
             className="
-              font-serif text-4xl sm:text-5xl leading-[1.1] tracking-tight
-              text-black drop-shadow-lg
+              font-bold text-4xl sm:text-5xl leading-[1.1] tracking-[-0.02em]
+              text-white drop-shadow-lg
               max-w-md
             "
           >
@@ -129,43 +130,62 @@ export default function HeroSection({
           {subtitle && (
             <p
               className="
-                mt-4 text-base sm:text-lg leading-relaxed
-                text-white/85 drop-shadow-sm
-                max-w-sm font-light
+                mt-5 text-base sm:text-lg leading-relaxed font-normal
+                text-white/90 drop-shadow-sm
+                max-w-sm
               "
             >
               {subtitle}
             </p>
           )}
 
-          <Link href={href} className="mt-8">
-            <span
-              className="
-                inline-block rounded-full
-                bg-primary text-white
-                px-8 py-3 text-sm font-semibold tracking-wide uppercase
-                shadow-lg
-                transition-transform duration-300 ease-out
-                hover:scale-105 active:scale-[0.98]
-              "
-            >
-              {buttonCaption}
-            </span>
-          </Link>
+          {/* Buttons - Pill shaped, Sage Green */}
+          <div className="flex flex-col sm:flex-row gap-3 mt-8">
+            <Link href={href}>
+              <span
+                className="
+                  inline-flex items-center justify-center gap-2 rounded-full
+                  bg-[#9DBE91] hover:bg-[#8AAE7E] text-white
+                  px-8 py-3.5 text-sm font-semibold tracking-wide uppercase
+                  shadow-lg
+                  transition-all duration-300 ease-out
+                  hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0
+                "
+              >
+                {buttonCaption}
+                <ChevronRight className="w-4 h-4" />
+              </span>
+            </Link>
+            <Link href="/shop/products">
+              <span
+                className="
+                  inline-flex items-center justify-center gap-2 rounded-full
+                  bg-white border-2 border-[#9DBE91] text-[#1B3022]
+                  px-8 py-3.5 text-sm font-semibold tracking-wide uppercase
+                  shadow-lg
+                  transition-all duration-300 ease-out
+                  hover:bg-[#9DBE91] hover:text-white hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0
+                "
+              >
+                View Collection
+                <ChevronRight className="w-4 h-4" />
+              </span>
+            </Link>
+          </div>
         </div>
 
         {/* ----- Desktop: left-aligned in negative space ----- */}
         <div
           className="
             hidden md:flex flex-col justify-center
-            h-full max-w-xl lg:max-w-2xl
-            pl-10 lg:pl-20 xl:pl-28 pr-8
+            h-full max-w-2xl lg:max-w-3xl
+            pl-10 lg:pl-20 xl:pl-28 pr-8 py-6
           "
         >
           <h1
             className="
-              font-serif text-5xl lg:text-6xl xl:text-7xl leading-[1.08] tracking-tight
-              text-black drop-shadow-lg
+              font-bold text-4xl lg:text-5xl xl:text-[4rem] leading-[1.1] tracking-[-0.02em]
+              text-white drop-shadow-lg
             "
           >
             {title}
@@ -174,28 +194,45 @@ export default function HeroSection({
           {subtitle && (
             <p
               className="
-                mt-5 lg:mt-6 text-lg lg:text-xl xl:text-2xl leading-relaxed
-                text-white/85 drop-shadow-sm
-                max-w-lg font-light
+                mt-6 lg:mt-8 text-lg lg:text-xl xl:text-2xl leading-relaxed font-normal
+                text-white/90 drop-shadow-sm
+                max-w-xl
               "
             >
               {subtitle}
             </p>
           )}
 
-          <div className="mt-10 lg:mt-12">
+          {/* Buttons - Pill shaped, Sage Green */}
+          <div className="flex gap-4 mt-10 lg:mt-12">
             <Link href={href}>
               <span
                 className="
-                  inline-block rounded-full
-                  bg-primary text-white
+                  inline-flex items-center justify-center gap-2 rounded-full
+                  bg-[#9DBE91] hover:bg-[#8AAE7E] text-white
                   px-10 py-4 text-base font-semibold tracking-wide uppercase
                   shadow-xl
-                  transition-transform duration-300 ease-out
-                  hover:scale-105 active:scale-[0.98]
+                  transition-all duration-300 ease-out
+                  hover:shadow-2xl hover:-translate-y-1 active:translate-y-0
                 "
               >
                 {buttonCaption}
+                <ChevronRight className="w-5 h-5" />
+              </span>
+            </Link>
+            <Link href="/shop/products">
+              <span
+                className="
+                  inline-flex items-center justify-center gap-2 rounded-full
+                  bg-transparent border-2 border-[#9DBE91] text-white
+                  px-10 py-4 text-base font-semibold tracking-wide uppercase
+                  shadow-xl
+                  transition-all duration-300 ease-out
+                  hover:bg-[#9DBE91] hover:text-white hover:shadow-2xl hover:-translate-y-1 active:translate-y-0
+                "
+              >
+                View Collection
+                <ChevronRight className="w-5 h-5" />
               </span>
             </Link>
           </div>

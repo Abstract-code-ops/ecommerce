@@ -70,23 +70,23 @@ export default function Contact() {
 
   return (
     <>
-      <section className="relative z-10 overflow-hidden bg-white py-20 dark:bg-dark lg:py-[120px]">
+      <section className="relative z-10 overflow-hidden bg-[#F9FAF7] py-20 lg:py-[120px]">
         <div className="container mx-auto px-4">
           <div className="-mx-4 flex flex-wrap lg:justify-between">
             <div className="w-full px-4 lg:w-1/2 xl:w-6/12">
               <div className="mb-12 max-w-[570px] lg:mb-0">
-                <span className="mb-4 block text-base font-semibold text-primary">
+                <span className="mb-4 block text-base font-semibold text-[#9DBE91]">
                   Contact Us
                 </span>
-                <h2 className="mb-6 text-[32px] font-bold uppercase text-dark dark:text-white sm:text-[40px] lg:text-[36px] xl:text-[40px]">
+                <h2 className="mb-6 text-[32px] font-bold uppercase text-[#1B3022] sm:text-[40px] lg:text-[36px] xl:text-[40px]">
                   GET IN TOUCH WITH US
                 </h2>
-                <p className="mb-9 text-base leading-relaxed text-body-color dark:text-dark-6">
+                <p className="mb-9 text-base leading-relaxed text-[#5A6B5E]">
                   Have questions or feedback? We&apos;d love to hear from you.
                   Send us a message and we&apos;ll respond as soon as possible.
                 </p>
                 <div className="mb-8 flex w-full max-w-[370px]">
-                  <div className="mr-6 flex h-[60px] w-full max-w-[60px] items-center justify-center overflow-hidden rounded bg-primary/5 text-primary sm:h-[70px] sm:max-w-[70px]">
+                  <div className="mr-6 flex h-[60px] w-full max-w-[60px] items-center justify-center overflow-hidden rounded bg-[#9DBE91]/10 text-[#9DBE91] sm:h-[70px] sm:max-w-[70px]">
                     <svg
                       width="32"
                       height="32"
@@ -101,17 +101,17 @@ export default function Contact() {
                     </svg>
                   </div>
                   <div className="w-full">
-                    <h4 className="mb-1 text-xl font-bold text-dark dark:text-white">
+                    <h4 className="mb-1 text-xl font-bold text-[#1B3022]">
                       Our Location
                     </h4>
-                    <p className="text-base text-body-color dark:text-dark-6">
+                    <p className="text-base text-[#5A6B5E]">
                       UAE, Sharjah, Al Majaz
                     </p>
                   </div>
                 </div>
 
                 <div className="mb-8 flex w-full max-w-[370px]">
-                  <div className="mr-6 flex h-[60px] w-full max-w-[60px] items-center justify-center overflow-hidden rounded bg-primary/5 text-primary sm:h-[70px] sm:max-w-[70px]">
+                  <div className="mr-6 flex h-[60px] w-full max-w-[60px] items-center justify-center overflow-hidden rounded bg-[#9DBE91]/10 text-[#9DBE91] sm:h-[70px] sm:max-w-[70px]">
                     <svg
                       width="32"
                       height="32"
@@ -141,17 +141,17 @@ export default function Contact() {
                     </svg>
                   </div>
                   <div className="w-full">
-                    <h4 className="mb-1 text-xl font-bold text-dark dark:text-white">
+                    <h4 className="mb-1 text-xl font-bold text-[#1B3022]">
                       Phone Number
                     </h4>
-                    <p className="text-base text-body-color dark:text-dark-6">
+                    <p className="text-base text-[#5A6B5E]">
                       +90 533 844 57 88
                     </p>
                   </div>
                 </div>
 
                 <div className="mb-8 flex w-full max-w-[370px]">
-                  <div className="mr-6 flex h-[60px] w-full max-w-[60px] items-center justify-center overflow-hidden rounded bg-primary/5 text-primary sm:h-[70px] sm:max-w-[70px]">
+                  <div className="mr-6 flex h-[60px] w-full max-w-[60px] items-center justify-center overflow-hidden rounded bg-[#9DBE91]/10 text-[#9DBE91] sm:h-[70px] sm:max-w-[70px]">
                     <svg
                       width="32"
                       height="32"
@@ -166,10 +166,10 @@ export default function Contact() {
                     </svg>
                   </div>
                   <div className="w-full">
-                    <h4 className="mb-1 text-xl font-bold text-dark dark:text-white">
+                    <h4 className="mb-1 text-xl font-bold text-[#1B3022]">
                       Email Address
                     </h4>
-                    <p className="text-base text-body-color dark:text-dark-6">
+                    <p className="text-base text-[#5A6B5E]">
                       support@globaledgeshop.com
                     </p>
                   </div>
@@ -177,7 +177,7 @@ export default function Contact() {
               </div>
             </div>
             <div className="w-full px-4 lg:w-1/2 xl:w-5/12">
-              <div className="relative rounded-lg bg-white p-8 shadow-lg dark:bg-dark-2 sm:p-12">
+              <div className="relative rounded-lg bg-[#F9FAF7] p-8 shadow-lg sm:p-12">
                 <form onSubmit={handleSubmit}>
                   <ContactInputBox
                     type="text"
@@ -242,7 +242,7 @@ export default function Contact() {
                     <button
                       type="submit"
                       disabled={status.type === "loading"}
-                      className="w-full rounded border border-black bg-black cursor-pointer active:scale-95 p-3 text-white transition hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                      className="w-full rounded-full bg-[#9DBE91] cursor-pointer active:scale-95 p-3 text-white transition hover:bg-[#8AAE7E] disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {status.type === "loading" ? (
                         <span className="flex items-center justify-center gap-2">
@@ -1098,7 +1098,7 @@ const ContactTextArea = ({
         value={value}
         onChange={onChange}
         required={required}
-        className="w-full resize-none rounded border border-stroke px-[14px] py-3 text-base text-body-color outline-none focus:border-primary dark:border-dark-3 dark:bg-dark dark:text-dark-6"
+        className="w-full resize-none rounded-xl border border-[#E5E7EB] bg-white px-[14px] py-3 text-base text-[#1B3022] outline-none focus:border-[#9DBE91] focus:ring-2 focus:ring-[#9DBE91]/20 placeholder:text-[#5A6B5E]"
       />
     </div>
   );
@@ -1130,7 +1130,7 @@ const ContactInputBox = ({
         value={value}
         onChange={onChange}
         required={required}
-        className="w-full rounded border border-stroke px-[14px] py-3 text-base text-body-color outline-none focus:border-primary dark:border-dark-3 dark:bg-dark dark:text-dark-6"
+        className="w-full rounded-xl border border-[#E5E7EB] bg-white px-[14px] py-3 text-base text-[#1B3022] outline-none focus:border-[#9DBE91] focus:ring-2 focus:ring-[#9DBE91]/20 placeholder:text-[#5A6B5E]"
       />
     </div>
   );

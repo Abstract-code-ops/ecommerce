@@ -45,6 +45,8 @@ const productSchema = new Schema<IProduct>({
         default: { average: 0, count: 0, distribution: [0, 0, 0, 0, 0] }
     },
     numSales: { type: Number, default: 0 },
+    // Number of pieces per unit/package
+    pcs: { type: Number, default: null },
 }, {
     timestamps: true
 })

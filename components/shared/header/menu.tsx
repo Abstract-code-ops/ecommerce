@@ -10,7 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useState, useEffect } from 'react'
 
 type MenuProps = {
-  layout?: "desktop" | "mobile" | "mobile-cart-only"
+  layout?: "desktop" | "mobile" | "mobile-cart-only" | "header-auth"
   onNavigate?: () => void
 }
 
@@ -28,6 +28,7 @@ export default function Menu({ layout = "desktop", onNavigate }: MenuProps) {
   const wishlistCount = mounted ? wishlistItems.length : 0
   const isMobile = layout === "mobile"
   const isMobileCartOnly = layout === "mobile-cart-only"
+  const isHeaderAuth = layout === "header-auth"
   const { user, signOut, isAdmin } = useAuth()
   
   // Animation state for cart badge
@@ -47,18 +48,72 @@ export default function Menu({ layout = "desktop", onNavigate }: MenuProps) {
       <Link
         href="/cart"
         onClick={onNavigate}
-        className="relative p-2 hover:bg-muted rounded-full transition-colors duration-200"
+        className="relative p-2 hover:bg-[#F4F5F2] rounded-full transition-colors duration-200"
       >
-        <ShoppingBag className="w-5 h-5 text-foreground" />
+        <ShoppingBag className="w-5 h-5 text-[#1B3022]" />
         {itemCount > 0 && (
           <span className={cn(
-            "absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1",
+            "absolute -top-0.5 -right-0.5 bg-[#9DBE91] text-white text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1",
             cartBounce && "animate-cart-bounce"
           )}>
             {itemCount > 99 ? "99+" : itemCount}
           </span>
         )}
       </Link>
+    )
+  }
+
+  // Header auth version - "Log In" text and "SIGN UP" button (Sage Green, pill-shaped)
+  if (isHeaderAuth) {
+    if (user) {
+      return (
+        <div className="flex items-center gap-3">
+          {/* Admin Button (only for admins) */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[#9DBE91] bg-[#9DBE91]/10 hover:bg-[#9DBE91]/20 rounded-full transition-all duration-200"
+              title="Admin Dashboard"
+            >
+              <Shield className="w-4 h-4" />
+              <span>Admin</span>
+            </Link>
+          )}
+          <ProfileDropdown
+            align="end"
+            trigger={
+              <button className="p-1.5 hover:bg-[#F4F5F2] rounded-full transition-colors duration-200">
+                <Avatar className="w-9 h-9 border-2 border-[#9DBE91]">
+                  <AvatarImage 
+                    src={user.user_metadata?.avatar_url || undefined} 
+                    alt={user.user_metadata?.full_name || user.email || 'User'} 
+                  />
+                  <AvatarFallback className="bg-[#9DBE91] text-white text-sm font-semibold">
+                    {user.user_metadata?.full_name?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            }
+          />
+        </div>
+      )
+    }
+    
+    return (
+      <div className="flex items-center gap-3">
+        <Link
+          href="/sign-in"
+          className="text-sm font-medium text-[#1B3022] hover:text-[#9DBE91] transition-colors duration-200"
+        >
+          Log In
+        </Link>
+        <Link
+          href="/sign-up"
+          className="bg-[#9DBE91] hover:bg-[#8AAE7E] text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+        >
+          SIGN UP
+        </Link>
+      </div>
     )
   }
 

@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils'
 import { getAdminProductById, updateProduct, deleteProduct } from '@/lib/actions/admin.actions'
 import { uploadMultipleToCloudinary, deleteFromCloudinary } from '@/lib/actions/upload.actions'
 import { toast } from 'sonner'
+import DescriptionEditor from '@/components/admin/description-editor'
 
 // Default categories and tags
 const defaultCategories = ['Paper Bags', 'Kraft Bags', 'Gift Bags', 'Eco Bags', 'Custom Bags', 'Shopping Bags', 'Food Packaging']
@@ -57,6 +58,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     price: '',
     listPrice: '',
     countInStock: '',
+    pcs: '',
     isPublished: true,
     tags: [] as string[],
     sizes: [] as string[],
@@ -89,6 +91,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             price: product.price?.toString() || '',
             listPrice: product.listPrice?.toString() || '',
             countInStock: product.countInStock?.toString() || '',
+            pcs: product.pcs?.toString() || '',
             isPublished: product.isPublished ?? true,
             tags: product.tags || [],
             sizes: product.sizes || [],
@@ -288,6 +291,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         price: parseFloat(formData.price),
         listPrice: formData.listPrice ? parseFloat(formData.listPrice) : undefined,
         countInStock: parseInt(formData.countInStock),
+        pcs: formData.pcs ? parseInt(formData.pcs) : null,
         isPublished: formData.isPublished,
         tags: formData.tags,
         sizes: formData.sizes,
@@ -439,11 +443,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Description</label>
-                  <textarea
-                    className="w-full min-h-[120px] px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Enter product description..."
+                  <DescriptionEditor
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
                   />
                 </div>
               </CardContent>
@@ -812,16 +814,29 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 <CardTitle>Inventory</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Stock Quantity <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={formData.countInStock}
-                    onChange={(e) => setFormData(prev => ({ ...prev, countInStock: e.target.value }))}
-                  />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Stock Quantity <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={formData.countInStock}
+                      onChange={(e) => setFormData(prev => ({ ...prev, countInStock: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Pieces per Unit</label>
+                    <Input
+                      type="number"
+                      placeholder="e.g. 50"
+                      min="1"
+                      value={formData.pcs}
+                      onChange={(e) => setFormData(prev => ({ ...prev, pcs: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">Number of pieces per package (optional)</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

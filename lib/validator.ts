@@ -55,6 +55,7 @@ export const ProductInputSchema = z.object({
         ])
     }).optional(),
     numSales: z.coerce.number().int().nonnegative("Number of Sales cannot be negative").optional(),
+    pcs: z.coerce.number().int().positive("Pieces must be a positive number").nullable().optional(),
 })
 
 export const OrderItemSchema = z.object({

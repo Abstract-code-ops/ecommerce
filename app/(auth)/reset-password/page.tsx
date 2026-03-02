@@ -51,22 +51,22 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex h-auto min-h-screen items-center justify-center overflow-x-hidden bg-[url('https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/auth/auth-background-2.png')] bg-cover bg-center bg-no-repeat py-10">
+    <div className="flex h-auto min-h-screen items-center justify-center overflow-x-hidden bg-[#F9FAF7] py-10">
       <div className="relative flex items-center justify-center px-4 sm:px-6 lg:px-8">
-        <div className="bg-base-100 shadow-base-300/20 z-1 w-full space-y-6 rounded-xl p-6 shadow-md sm:min-w-md lg:p-8">
+        <div className="bg-white z-1 w-full space-y-6 rounded-3xl p-6 shadow-lg sm:min-w-md lg:p-8">
           <div className="flex items-center justify-center gap-3">
             <Image src="/images/logo-full.png" alt="logo" width={120} height={110} />
           </div>
           
           <div>
-            <h3 className="mb-1.5 text-2xl text-center font-semibold">Set New Password</h3>
-            <p className="text-black/70 text-center">Enter your new password below.</p>
+            <h3 className="mb-1.5 text-2xl text-center font-semibold text-[#1B3022]">Set New Password</h3>
+            <p className="text-[#1B3022]/70 text-center">Enter your new password below.</p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="label-text" htmlFor="password">New Password*</label>
-              <div className="input flex items-center">
+              <label className="label-text text-[#1B3022]" htmlFor="password">New Password*</label>
+              <div className="input bg-white border-[#E5E7EB] rounded-xl focus-within:border-[#9DBE91] focus-within:ring-1 focus-within:ring-[#9DBE91] flex items-center">
                 <input 
                   id="password" 
                   type={showPassword ? 'text' : 'password'} 
@@ -81,17 +81,17 @@ export default function ResetPasswordPage() {
                   className="block cursor-pointer"
                 >
                   {showPassword ? (
-                    <EyeOff className="size-5 shrink-0 text-black/50" />
+                    <EyeOff className="size-5 shrink-0 text-[#1B3022]/50" />
                   ) : (
-                    <Eye className="size-5 shrink-0 text-black/50" />
+                    <Eye className="size-5 shrink-0 text-[#1B3022]/50" />
                   )}
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="label-text" htmlFor="confirmPassword">Confirm Password*</label>
-              <div className="input flex items-center">
+              <label className="label-text text-[#1B3022]" htmlFor="confirmPassword">Confirm Password*</label>
+              <div className="input bg-white border-[#E5E7EB] rounded-xl focus-within:border-[#9DBE91] focus-within:ring-1 focus-within:ring-[#9DBE91] flex items-center">
                 <input 
                   id="confirmPassword" 
                   type={showPassword ? 'text' : 'password'} 
@@ -104,7 +104,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <button 
-              className="btn btn-lg btn-primary btn-block"
+              className="btn btn-lg w-full bg-[#9DBE91] hover:bg-[#8AAE7E] text-white rounded-full uppercase tracking-wider font-medium border-none"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

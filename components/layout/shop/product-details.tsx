@@ -15,6 +15,55 @@ import { cn } from '@/lib/utils';
 import useWishlistStore from '@/lib/hooks/useWishlistStore';
 import { toast } from 'sonner';
 
+// Helper function to format description with basic markdown-like styling
+function formatDescription(text: string): string {
+  if (!text) return '';
+  
+  // Escape HTML to prevent XSS
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  // Convert markdown-like syntax to HTML
+  // Headers: # Header, ## Header, ### Header
+  html = html.replace(/^### (.+)$/gm, '<h4 class="text-sm font-semibold mt-4 mb-2">$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3 class="text-base font-semibold mt-4 mb-2">$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h2 class="text-lg font-semibold mt-4 mb-2">$1</h2>');
+  
+  // Bold: **text** or __text__
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  
+  // Italic: *text* or _text_
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+  
+  // Bullet points: - item or • item or * item (at line start)
+  html = html.replace(/^[-•*] (.+)$/gm, '<li class="ml-4">$1</li>');
+  
+  // Wrap consecutive <li> elements in <ul>
+  html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, '<ul class="list-disc list-inside space-y-1 my-2">$&</ul>');
+  
+  // Numbered lists: 1. item, 2. item, etc.
+  html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4">$1</li>');
+  
+  // Convert double newlines to paragraph breaks
+  html = html.replace(/\n\n/g, '</p><p class="mt-3">');
+  
+  // Convert single newlines to line breaks
+  html = html.replace(/\n/g, '<br>');
+  
+  // Wrap in paragraph
+  html = '<p>' + html + '</p>';
+  
+  // Clean up empty paragraphs
+  html = html.replace(/<p><\/p>/g, '');
+  html = html.replace(/<p class="mt-3"><\/p>/g, '');
+  
+  return html;
+}
+
 type ProductDetailsProps = {
     product: IProduct;
     reviewStats?: ReviewStats;
@@ -425,7 +474,12 @@ const ProductDetailsInfo = (props: ProductDetailsProps) => {
               Description
             </AccordionTrigger>
             <AccordionContent className="text-muted-foreground leading-relaxed pb-6">
-              {product.description || "No description available for this product."}
+              <div 
+                className="prose prose-sm max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-p:text-muted-foreground prose-li:text-muted-foreground prose-strong:text-foreground"
+                dangerouslySetInnerHTML={{ 
+                  __html: formatDescription(product.description || "No description available for this product.") 
+                }}
+              />
             </AccordionContent>
           </AccordionItem>
 

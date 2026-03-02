@@ -8,15 +8,15 @@ import { formatCurrency } from '@/lib/utils'
 import Image from 'next/image'
 import Link from 'next/link'
 import { 
-  Trash2, Plus, Minus, ShoppingBag, Banknote, 
-  ChevronRight, Shield, Truck, RotateCcw, Tag, 
-  Clock, Package, Heart, AlertCircle, User, LogIn,
+  Trash2, Plus, Minus, ShoppingBag,
+  ChevronRight, Shield, Truck, RotateCcw,
+  Clock, Package, Heart, AlertCircle,
   MapPin, Check, ChevronDown, Home, Building2, Loader2,
-  CheckCircle2, ArrowLeft, Lock, Mail, Navigation
+  CheckCircle2, ArrowLeft, Lock
 } from 'lucide-react'
 import { toast } from 'sonner'
-import ShippingAddressForm from '@/components/shared/shipping-address-form'
-import GuestInfoForm from '@/components/shared/guest-info-form'
+import OrderReceipt from '@/components/cart/order-receipt'
+import ReceiptModal from '@/components/cart/receipt-modal'
 import { getAddresses, createAddress } from '@/lib/actions/address.actions'
 import { createOrder, validateCartStock } from '@/lib/actions/order.actions'
 import { Address, ShippingAddressSnapshot, ProductSnapshot } from '@/types/supabase'
@@ -52,6 +52,32 @@ const CartPage = () => {
     lat?: number;
     lng?: number;
   } | null>(null);
+  
+  // Receipt modal state
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [receiptData, setReceiptData] = useState<{
+    fullName: string;
+    email: string;
+    phone: string;
+    address: {
+      fullName: string;
+      street: string;
+      city: string;
+      emirate: string;
+      country: string;
+      lat?: number;
+      lng?: number;
+    } | null;
+    couponCode: string;
+    paymentMethod: 'CashOnDelivery' | 'Card';
+  }>({
+    fullName: '',
+    email: '',
+    phone: '',
+    address: null,
+    couponCode: '',
+    paymentMethod: 'CashOnDelivery',
+  });
   
   // Track if addresses have been fetched to prevent duplicate calls on tab focus
   const addressesFetchedRef = useRef(false);
@@ -92,6 +118,36 @@ const CartPage = () => {
   }, [user]);
 
   const selectedAddress = savedAddresses.find(a => a.id === selectedAddressId);
+
+  // Auto-populate receipt data when user or addresses change
+  useEffect(() => {
+    if (user) {
+      setReceiptData(prev => ({
+        ...prev,
+        fullName: user.user_metadata?.full_name || prev.fullName,
+        email: user.email || prev.email,
+        phone: user.user_metadata?.phone || prev.phone,
+      }));
+    }
+  }, [user]);
+
+  // Auto-populate receipt address when selected address changes
+  useEffect(() => {
+    if (selectedAddress) {
+      setReceiptData(prev => ({
+        ...prev,
+        address: {
+          fullName: selectedAddress.full_name,
+          street: selectedAddress.street,
+          city: selectedAddress.city,
+          emirate: selectedAddress.emirate,
+          country: selectedAddress.country || 'UAE',
+          lat: selectedAddress.lat || undefined,
+          lng: selectedAddress.lng || undefined,
+        },
+      }));
+    }
+  }, [selectedAddress]);
 
   // Update shipping cost when address changes
   useEffect(() => {
@@ -280,37 +336,42 @@ const CartPage = () => {
 
   // Handle checkout - update to show specific out of stock errors
   const handleCheckout = async () => {
-    // Validation
-    if (cart.paymentMethod !== 'CashOnDelivery') {
+    // Validation using receiptData
+    if (receiptData.paymentMethod !== 'CashOnDelivery') {
       toast.error('Please select Cash on Delivery as payment method');
+      setIsReceiptModalOpen(true);
       return;
     }
 
-    const shippingAddress = getCheckoutAddress();
-    if (!shippingAddress) {
-      toast.error('Please select or add a shipping address');
+    if (!receiptData.address) {
+      toast.error('Please complete the receipt with your shipping address');
+      setIsReceiptModalOpen(true);
       return;
     }
 
-    // For guest users, require email and name
-    if (!user && !guestEmail) {
+    // Require email and name
+    if (!receiptData.email) {
       toast.error('Please enter your email address');
+      setIsReceiptModalOpen(true);
       return;
     }
 
-    if (!user && !guestName) {
+    if (!receiptData.fullName) {
       toast.error('Please enter your full name');
+      setIsReceiptModalOpen(true);
       return;
     }
 
-    // Validate email format for guests
-    if (!user && guestEmail) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(guestEmail)) {
-        toast.error('Please enter a valid email address');
-        return;
-      }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(receiptData.email)) {
+      toast.error('Please enter a valid email address');
+      setIsReceiptModalOpen(true);
+      return;
     }
+
+    // Use receiptData.address for shipping
+    const shippingAddress: ShippingAddressSnapshot = receiptData.address;
 
     if (cart.items.length === 0) {
       toast.error('Your cart is empty');
@@ -351,7 +412,7 @@ const CartPage = () => {
         tax: cart.taxPrice || 0,
         discount: 0,
         paymentMethod: 'CashOnDelivery',
-        guestEmail: !user ? guestEmail : undefined,
+        guestEmail: !user ? receiptData.email : undefined,
       });
 
       if (result.success && result.data) {
@@ -365,8 +426,8 @@ const CartPage = () => {
         });
         
         // Add email for guest users
-        if (result.data.isGuest && guestEmail) {
-          params.append('email', guestEmail);
+        if (result.data.isGuest && receiptData.email) {
+          params.append('email', receiptData.email);
         }
         
         router.push(`/checkout/success?${params.toString()}`);
@@ -438,18 +499,18 @@ const CartPage = () => {
   // Empty cart state
   if (!cart.items || cart.items.length === 0) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center px-4 bg-background">
+      <div className="min-h-[70vh] flex items-center justify-center px-4 bg-[#F9FAF7]">
         <div className="text-center max-w-md animate-fade-in">
-          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-muted flex items-center justify-center">
-            <ShoppingBag className="w-12 h-12 text-muted-foreground/60" strokeWidth={1.5} />
+          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-[#F4F5F2] flex items-center justify-center">
+            <ShoppingBag className="w-12 h-12 text-[#5A6B5E]/60" strokeWidth={1.5} />
           </div>
-          <h1 className="font-serif text-3xl md:text-4xl mb-4 text-foreground">Your Cart is Empty</h1>
-          <p className="text-muted-foreground mb-8">
+          <h1 className="font-bold text-3xl md:text-4xl mb-4 text-[#1B3022]">Your Cart is Empty</h1>
+          <p className="text-[#5A6B5E] mb-8">
             Looks like you haven&apos;t added anything to your cart yet. Explore our collection to find something special.
           </p>
           <Link 
             href="/shop"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors btn-hover-lift"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-[#9DBE91] text-white rounded-full font-medium hover:bg-[#8AAE7E] transition-colors btn-hover-lift"
           >
             Start Shopping
             <ChevronRight className="w-4 h-4" />
@@ -460,21 +521,21 @@ const CartPage = () => {
   }
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-[#F9FAF7] min-h-screen">
       {/* Page Header */}
-      <div className="bg-card border-b border-border">
+      <div className="bg-white border-b border-[#E5E7EB]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
           <div className="flex items-center gap-4">
             <Link 
               href="/shop" 
-              className="p-2 hover:bg-muted rounded-full transition-colors"
+              className="p-2 hover:bg-[#F4F5F2] rounded-full transition-colors"
               aria-label="Back to shop"
             >
-              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+              <ArrowLeft className="w-5 h-5 text-[#5A6B5E]" />
             </Link>
             <div>
-              <h1 className="font-serif text-2xl md:text-3xl text-foreground">Shopping Cart</h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <h1 className="font-bold text-2xl md:text-3xl text-[#1B3022]">Shopping Cart</h1>
+              <p className="text-sm text-[#5A6B5E] mt-1">
                 {cart.items.length} {cart.items.length === 1 ? 'item' : 'items'} in your cart
               </p>
             </div>
@@ -490,7 +551,7 @@ const CartPage = () => {
             
             {/* Stock validation loading indicator */}
             {isValidatingStock && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-4 py-3 animate-pulse">
+              <div className="flex items-center gap-2 text-sm text-[#5A6B5E] bg-[#F4F5F2]/50 rounded-lg px-4 py-3 animate-pulse">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Checking stock availability...
               </div>
@@ -505,18 +566,18 @@ const CartPage = () => {
             )}
 
             {/* Cart Items */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <div className="p-4 md:p-6 border-b border-border flex items-center justify-between">
-                <span className="font-medium text-foreground">Cart Items</span>
+            <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+              <div className="p-4 md:p-6 border-b border-[#E5E7EB] flex items-center justify-between">
+                <span className="font-medium text-[#1B3022]">Cart Items</span>
                 <button
                   onClick={handleClearCart}
-                  className="text-sm text-muted-foreground hover:text-destructive transition-colors"
+                  className="text-sm text-[#5A6B5E] hover:text-destructive transition-colors"
                 >
                   Clear all
                 </button>
               </div>
 
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-[#E5E7EB]">
                 {cart.items.map((item) => {
                   const itemStock = stockStatus.get(item.productIds[0])
                   const isOutOfStock = itemStock && !itemStock.isAvailable
@@ -527,12 +588,12 @@ const CartPage = () => {
                       key={item.clientId}
                       className={cn(
                         "p-4 md:p-6 transition-all duration-300 relative",
-                        isOutOfStock ? "bg-muted/50" : "hover:bg-muted/30"
+                        isOutOfStock ? "bg-[#F4F5F2]/50" : "hover:bg-[#F4F5F2]/30"
                       )}
                     >
                       {/* Out of Stock Overlay */}
                       {isOutOfStock && (
-                        <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-[#F9FAF7]/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
                           <div className="bg-destructive text-destructive-foreground px-5 py-3 rounded-lg font-medium text-sm shadow-lg flex items-center gap-2">
                             <AlertCircle className="w-4 h-4" />
                             Out of Stock
@@ -549,7 +610,7 @@ const CartPage = () => {
                         {/* Product Image */}
                         <Link href={`/shop/products/${item.slug}`} className="shrink-0">
                           <div className={cn(
-                            "relative w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-muted group",
+                            "relative w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden bg-[#F4F5F2] group",
                             isOutOfStock && "opacity-50"
                           )}>
                             <Image
@@ -569,12 +630,12 @@ const CartPage = () => {
                             <div className="min-w-0 space-y-1">
                               <Link 
                                 href={`/shop/products/${item.slug}`}
-                                className="font-medium text-foreground hover:text-primary transition-colors line-clamp-2"
+                                className="font-medium text-[#1B3022] hover:text-[#9DBE91] transition-colors line-clamp-2"
                               >
                                 {item.name}
                               </Link>
                               {item.category && (
-                                <p className="text-xs text-muted-foreground">{item.category}</p>
+                                <p className="text-xs text-[#5A6B5E]">{item.category}</p>
                               )}
                             </div>
                             
@@ -601,7 +662,7 @@ const CartPage = () => {
                                   "p-2 rounded-lg transition-all duration-200",
                                   isInWishlist(item.productIds[0])
                                     ? "text-rose-500 bg-rose-50 dark:bg-rose-950/20"
-                                    : "text-muted-foreground hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                                    : "text-[#5A6B5E] hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20"
                                 )}
                                 title={isInWishlist(item.productIds[0]) ? "Remove from wishlist" : "Add to wishlist"}
                               >
@@ -609,7 +670,7 @@ const CartPage = () => {
                               </button>
                               <button
                                 onClick={() => handleRemoveItem(item.clientId, item.name)}
-                                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all duration-200"
+                                className="p-2 text-[#5A6B5E] hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all duration-200"
                                 title="Remove"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -621,12 +682,12 @@ const CartPage = () => {
                           {(item.size || item.color) && (
                             <div className="flex flex-wrap gap-2 mt-3">
                               {item.size && (
-                                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                                <span className="text-xs bg-[#F4F5F2] text-[#5A6B5E] px-2 py-1 rounded">
                                   Size: {item.size}
                                 </span>
                               )}
                               {item.color && (
-                                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                                <span className="text-xs bg-[#F4F5F2] text-[#5A6B5E] px-2 py-1 rounded">
                                   Color: {item.color}
                                 </span>
                               )}
@@ -643,11 +704,11 @@ const CartPage = () => {
 
                           {/* Price & Quantity */}
                           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
-                            <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                            <div className="flex items-center border border-[#E5E7EB] rounded-lg overflow-hidden">
                               <button
                                 onClick={() => handleUpdateQuantity(item.clientId, item.quantity - 1, item.name)}
                                 disabled={item.quantity <= 1 || isOutOfStock}
-                                className="p-2.5 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                className="p-2.5 hover:bg-[#F4F5F2] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
@@ -657,17 +718,17 @@ const CartPage = () => {
                               <button
                                 onClick={() => handleUpdateQuantity(item.clientId, item.quantity + 1, item.name)}
                                 disabled={item.quantity >= availableStock || isOutOfStock}
-                                className="p-2.5 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                className="p-2.5 hover:bg-[#F4F5F2] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                               >
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
                             </div>
                             <div className="text-left sm:text-right">
-                              <span className="font-semibold text-lg text-foreground">
+                              <span className="font-semibold text-lg text-[#1B3022]">
                                 {formatCurrency(item.totalPrice)}
                               </span>
                               {item.quantity > 1 && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-[#5A6B5E]">
                                   {formatCurrency(item.price)} each
                                 </p>
                               )}
@@ -695,9 +756,9 @@ const CartPage = () => {
             </div>
 
             {/* Delivery Info Banner */}
-            <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/10 rounded-xl text-sm">
-              <Clock className="w-5 h-5 text-primary shrink-0" />
-              <span className="text-foreground">
+            <div className="flex items-center gap-3 p-4 bg-[#9DBE91]/5 border border-[#9DBE91]/10 rounded-xl text-sm">
+              <Clock className="w-5 h-5 text-[#9DBE91] shrink-0" />
+              <span className="text-[#1B3022]">
                 Order now for estimated delivery by <strong>{getEstimatedDelivery()}</strong>
               </span>
             </div>
@@ -705,7 +766,7 @@ const CartPage = () => {
             {/* Continue Shopping Link */}
             <Link 
               href="/shop" 
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-[#5A6B5E] hover:text-[#9DBE91] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Continue Shopping
@@ -716,280 +777,18 @@ const CartPage = () => {
           <div className="lg:col-span-5 space-y-6">
             <div className="lg:sticky lg:top-24">
               
-              {/* User Account Card */}
-              {user ? (
-                <div className="bg-primary/5 border border-primary/10 rounded-xl p-5 mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-serif text-lg">
-                      {user.user_metadata?.full_name?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">
-                        {user.user_metadata?.full_name || 'Welcome!'}
-                      </p>
-                      <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                    </div>
-                    <Link 
-                      href="/profile" 
-                      className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
-                      title="Go to profile"
-                    >
-                      <User className="w-5 h-5 text-primary" />
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <GuestInfoForm
-                  email={guestEmail}
-                  name={guestName}
-                  onEmailChange={setGuestEmail}
-                  onNameChange={setGuestName}
-                />
-              )}
-
-              {/* Shipping Address */}
-              <div className="bg-card border border-border rounded-xl p-5 mb-6">
-                <h3 className="font-medium mb-4 flex items-center gap-2 text-foreground">
-                  <Package className="w-5 h-5 text-primary" />
-                  Shipping Address
-                </h3>
-                
-                {/* Loading state */}
-                {isLoadingAddresses ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  </div>
-                ) : savedAddresses.length > 0 && !showAddressForm ? (
-                  /* Saved addresses selector */
-                  <div className="space-y-4">
-                    {/* Selected Address Display - Premium Design */}
-                    <button
-                      onClick={() => setIsAddressDropdownOpen(!isAddressDropdownOpen)}
-                      className="w-full text-left group relative overflow-hidden"
-                    >
-                      {selectedAddress ? (
-                        <>
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent opacity-50 group-hover:opacity-70 transition-opacity" />
-                          <div className="relative p-4 bg-card border border-primary/20 rounded-xl shadow-sm hover:shadow-md transition-all">
-                            <div className="flex items-start gap-3">
-                              {(() => {
-                                const Icon = getAddressTypeIcon(selectedAddress.type);
-                                return (
-                                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0 shadow-lg">
-                                    <Icon className="w-6 h-6 text-white" />
-                                  </div>
-                                );
-                              })()}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-semibold text-base">{selectedAddress.label}</span>
-                                  {selectedAddress.is_default && (
-                                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Default</span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-muted-foreground leading-relaxed truncate">
-                                  {selectedAddress.street}
-                                </p>
-                                <p className="text-sm text-muted-foreground font-medium truncate">
-                                  {selectedAddress.city}, {selectedAddress.emirate}
-                                </p>
-                                {selectedAddress.lat && selectedAddress.lng && (
-                                  <div className="flex items-center gap-1.5 mt-2 text-xs text-primary/70 font-mono">
-                                    <Navigation className="w-3 h-3" />
-                                    <span>{selectedAddress.lat.toFixed(4)}°N, {selectedAddress.lng.toFixed(4)}°E</span>
-                                  </div>
-                                )}
-                              </div>
-                              <ChevronDown className={cn(
-                                "w-5 h-5 text-muted-foreground transition-transform shrink-0",
-                                isAddressDropdownOpen && "rotate-180"
-                              )} />
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="p-4 border border-dashed border-border rounded-xl">
-                          <span className="text-muted-foreground">Select an address</span>
-                        </div>
-                      )}
-                    </button>
-
-                    {/* Dropdown */}
-                    {isAddressDropdownOpen && (
-                      <div className="border border-border rounded-lg overflow-hidden bg-card shadow-lg animate-fade-in">
-                        {savedAddresses.map((addr) => {
-                          const Icon = getAddressTypeIcon(addr.type);
-                          const isSelected = addr.id === selectedAddressId;
-                          return (
-                            <button
-                              key={addr.id}
-                              onClick={() => {
-                                setSelectedAddressId(addr.id);
-                                setIsAddressDropdownOpen(false);
-                              }}
-                              className={cn(
-                                "w-full text-left p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors border-b border-border last:border-b-0",
-                                isSelected && "bg-primary/5"
-                              )}
-                            >
-                              <div className={cn(
-                                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                                isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
-                              )}>
-                                {isSelected ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4 text-muted-foreground" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">{addr.label}</span>
-                                  {addr.is_default && (
-                                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Default</span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                                  {addr.street}, {addr.city}
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Add new address link */}
-                    <button
-                      onClick={() => setShowAddressForm(true)}
-                      className="w-full text-sm text-primary hover:text-primary/80 flex items-center justify-center gap-1.5 py-2 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Use a different address
-                    </button>
-                  </div>
-                ) : (
-                  /* Address form for new address or no saved addresses OR guest users */
-                  <div>
-                    {savedAddresses.length > 0 && (
-                      <button
-                        onClick={() => setShowAddressForm(false)}
-                        className="text-sm text-muted-foreground hover:text-primary mb-4 flex items-center gap-1.5 transition-colors"
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                        Back to saved addresses
-                      </button>
-                    )}
-                    
-                    {/* Guest Address Confirmation */}
-                    {!user && guestAddress && (
-                      <div className="mb-4 group relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent opacity-50 transition-opacity" />
-                        <div className="relative p-5 bg-card border border-primary/20 rounded-2xl shadow-sm">
-                          <div className="flex items-start gap-4">
-                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0 shadow-lg">
-                              <MapPin className="w-7 h-7 text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-lg text-foreground mb-1.5">{guestAddress.fullName}</p>
-                              <p className="text-sm text-muted-foreground leading-relaxed mb-1">
-                                {guestAddress.street}
-                              </p>
-                              <p className="text-sm text-muted-foreground font-medium">
-                                {guestAddress.city}, {guestAddress.emirate}
-                              </p>
-                              {guestAddress.lat && guestAddress.lng && (
-                                <div className="flex items-center gap-1.5 mt-3 text-xs text-primary/70 font-mono">
-                                  <Navigation className="w-3.5 h-3.5" />
-                                  <span>{guestAddress.lat.toFixed(4)}°N, {guestAddress.lng.toFixed(4)}°E</span>
-                                </div>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => setGuestAddress(null)}
-                              className="shrink-0 text-primary hover:text-primary/90 hover:bg-primary/10 font-medium text-sm px-3 py-1.5 rounded-lg transition-colors"
-                            >
-                              Change
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Show form only if no guest address is set */}
-                    {(!user && !guestAddress) || user ? (
-                      <ShippingAddressForm 
-                        onSave={handleAddressSave} 
-                        fullName={user ? (user.user_metadata?.full_name || user.email?.split('@')[0] || '') : guestName}
-                      />
-                    ) : null}
-                  </div>
-                )}
-              </div>
-
-              {/* Order Summary */}
-              <div className="bg-card border border-border rounded-xl p-5 mb-6">
-                <h3 className="font-medium mb-4 text-foreground">Order Summary</h3>
-                
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal ({cart.items.length} items)</span>
-                    <span className="font-medium">{formatCurrency(cart.items.reduce((acc, item) => acc + item.totalPrice, 0))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    {isCalculatingShipping ? (
-                      <span className="flex items-center gap-2 font-medium text-muted-foreground">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Calculating...
-                      </span>
-                    ) : (
-                      <span className={cn("font-medium", cart.shippingPrice === 0 && "text-primary")}>
-                        {cart.shippingPrice === 0 ? "Free" : formatCurrency(cart.shippingPrice || 0)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-border">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-lg">Total</span>
-                    <span className="font-semibold text-2xl text-primary">{formatCurrency(cart.totalPrice || 0)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Method */}
-              <div className="bg-card border border-border rounded-xl p-5 mb-6">
-                <h3 className="font-medium mb-4 text-foreground">Payment Method</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setPaymentMethod('Card')}
-                    disabled
-                    className="flex flex-col items-center justify-center p-4 border border-border rounded-lg opacity-50 cursor-not-allowed bg-muted/30"
-                  >
-                    <span className="text-xs text-muted-foreground">Card Payment</span>
-                    <span className="text-[10px] text-muted-foreground/70 mt-1">Coming Soon</span>
-                  </button>
-
-                  <button
-                    onClick={() => setPaymentMethod('CashOnDelivery')}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-4 border rounded-lg transition-all duration-200",
-                      cart.paymentMethod === 'CashOnDelivery'
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "border-border hover:border-primary/40 hover:bg-muted/30"
-                    )}
-                  >
-                    <Banknote className={cn(
-                      "w-6 h-6 mb-2",
-                      cart.paymentMethod === 'CashOnDelivery' ? "text-primary" : "text-muted-foreground"
-                    )} />
-                    <span className={cn(
-                      "text-xs font-medium",
-                      cart.paymentMethod === 'CashOnDelivery' ? "text-primary" : "text-muted-foreground"
-                    )}>
-                      Cash on Delivery
-                    </span>
-                  </button>
-                </div>
-              </div>
+              {/* Order Receipt */}
+              <OrderReceipt
+                receiptData={receiptData}
+                subtotal={cart.items.reduce((acc, item) => acc + item.totalPrice, 0)}
+                shippingCost={cart.shippingPrice || 0}
+                discount={0}
+                total={cart.totalPrice || 0}
+                itemCount={cart.items.length}
+                isComplete={!!(receiptData.fullName && receiptData.email && receiptData.address && receiptData.paymentMethod)}
+                onEditClick={() => setIsReceiptModalOpen(true)}
+                isCalculatingShipping={isCalculatingShipping}
+              />
 
               {/* Checkout Button */}
               <button 
@@ -997,13 +796,16 @@ const CartPage = () => {
                 disabled={
                   isCheckingOut || 
                   cart.items.length === 0 || 
-                  cart.paymentMethod !== 'CashOnDelivery' ||
+                  !receiptData.paymentMethod ||
+                  !receiptData.address ||
+                  !receiptData.fullName ||
+                  !receiptData.email ||
                   hasOutOfStockItems ||
                   isValidatingStock
                 }
                 className={cn(
-                  "w-full py-4 rounded-xl font-medium text-lg transition-all duration-300 flex items-center justify-center gap-2",
-                  "bg-primary text-primary-foreground hover:bg-primary/90",
+                  "w-full py-4 rounded-full font-medium text-lg transition-all duration-300 flex items-center justify-center gap-2 mt-6",
+                  "bg-[#9DBE91] text-white hover:bg-[#8AAE7E]",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
                   "btn-hover-lift"
                 )}
@@ -1023,6 +825,11 @@ const CartPage = () => {
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Checking Stock...
                   </>
+                ) : !receiptData.address || !receiptData.fullName || !receiptData.email ? (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    Complete Receipt to Order
+                  </>
                 ) : (
                   <>
                     <Lock className="w-5 h-5" />
@@ -1033,16 +840,16 @@ const CartPage = () => {
 
               {/* Trust Badges */}
               <div className="mt-6 space-y-3">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <Shield className="w-4 h-4 text-primary shrink-0" />
+                <div className="flex items-center gap-3 text-sm text-[#5A6B5E]">
+                  <Shield className="w-4 h-4 text-[#9DBE91] shrink-0" />
                   <span>Secure SSL encrypted checkout</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <Truck className="w-4 h-4 text-primary shrink-0" />
+                <div className="flex items-center gap-3 text-sm text-[#5A6B5E]">
+                  <Truck className="w-4 h-4 text-[#9DBE91] shrink-0" />
                   <span>Free shipping on orders over AED 100</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <RotateCcw className="w-4 h-4 text-primary shrink-0" />
+                <div className="flex items-center gap-3 text-sm text-[#5A6B5E]">
+                  <RotateCcw className="w-4 h-4 text-[#9DBE91] shrink-0" />
                   <span>30-day hassle-free returns</span>
                 </div>
               </div>
@@ -1051,15 +858,55 @@ const CartPage = () => {
         </div>
       </div>
 
+      {/* Receipt Modal */}
+      <ReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        onComplete={(data) => {
+          setReceiptData(data);
+          setPaymentMethod(data.paymentMethod);
+          if (data.address) {
+            setShippingAddress(data.address);
+            if (!user) {
+              setGuestAddress(data.address);
+            }
+          }
+          if (!user) {
+            setGuestEmail(data.email);
+            setGuestName(data.fullName);
+          }
+        }}
+        initialData={receiptData}
+        shippingCost={cart.shippingPrice || 0}
+        isCalculatingShipping={isCalculatingShipping}
+        onAddressChange={(address) => {
+          if (address) {
+            setShippingAddress(address);
+            if (!user) {
+              setGuestAddress(address);
+            }
+          }
+        }}
+        isAuthenticated={!!user}
+        userEmail={user?.email}
+        userName={user?.user_metadata?.full_name}
+      />
+
       {/* Mobile Sticky Checkout Bar */}
       <div className="sticky-bottom-mobile">
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground">Total</span>
+            <span className="text-xs text-[#5A6B5E]">Total</span>
             <span className="font-semibold text-xl">{formatCurrency(cart.totalPrice || 0)}</span>
           </div>
           <button 
-            onClick={handleCheckout}
+            onClick={() => {
+              if (!receiptData.address || !receiptData.fullName || !receiptData.email) {
+                setIsReceiptModalOpen(true);
+              } else {
+                handleCheckout();
+              }
+            }}
             disabled={
               isCheckingOut || 
               cart.items.length === 0 || 
@@ -1068,8 +915,8 @@ const CartPage = () => {
               isValidatingStock
             }
             className={cn(
-              "flex-1 py-3.5 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2",
-              "bg-primary text-primary-foreground hover:bg-primary/90",
+              "flex-1 py-3.5 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2",
+              "bg-[#9DBE91] text-white hover:bg-[#8AAE7E]",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >

@@ -9,8 +9,8 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { 
-  User, Mail, Phone, Calendar, Edit3, Save, X, 
-  Camera, Shield, Bell, Loader2, CheckCircle2,
+  User, Mail, Phone, Edit3, Save, X, 
+  Camera, Loader2, CheckCircle2, Calendar, Shield, Bell,
 } from 'lucide-react'
 import Link from 'next/link'
 

@@ -16,28 +16,6 @@ import { ArrowRight, Leaf, Truck, RefreshCw, Shield } from "lucide-react"
 // Increase revalidation time for better caching (5 minutes)
 export const revalidate = 300;
 
-// Default/fallback categories for navigation with images
-const defaultCategories = [
-    { 
-        name: "Paper Bags", 
-        href: "/shop/products?category=Paperbags", 
-        description: "Eco-friendly & sustainable", 
-        image: "/images/casual-teenager-checking-her-shopping-bags.jpg"
-    },
-    { 
-        name: "Gift Boxes", 
-        href: "/shop/products?category=Gift+Boxes", 
-        description: "Premium gift packaging", 
-        image: "/images/composition-wrapped-gifts-cement-background.jpg"
-    },
-    { 
-        name: "Plastic Bags", 
-        href: "/shop/products?category=Plastic+Bags", 
-        description: "Durable & versatile", 
-        image: "/images/anna-szentgyorgyi-bWMp9C3DFYE-unsplash.jpg"
-    },
-]
-
 const features = [
     { icon: Leaf, title: "Eco-Friendly", description: "Sustainable materials" },
     { icon: Truck, title: "Free Shipping", description: "On orders over AED 200" },
@@ -76,7 +54,7 @@ export default async function Page() {
             description: cat.description,
             image: cat.image_url
         }))
-        : defaultCategories;
+        : [];
 
     const carouselItems = dbBanners.length > 0 
         ? dbBanners.map(b => ({
@@ -126,8 +104,8 @@ export default async function Page() {
             </section>
 
             {/* Trust Badges */}
-            <section className="bg-muted/50 border-y border-border/50">
-                <div className="container-premium py-6 md:py-8">
+            <section className="bg-[#F4F5F2] border-y border-[#E5E7EB]">
+                <div className="container-premium py-8 md:py-10">
                     <FadeInSection>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
                         {features.map((feature, index) => (
@@ -135,14 +113,14 @@ export default async function Page() {
                                 key={feature.title} 
                                 className="flex items-center gap-3 md:gap-4"
                             >
-                                <div className="shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <feature.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                                <div className="shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#9DBE91]/15 flex items-center justify-center">
+                                    <feature.icon className="w-5 h-5 md:w-6 md:h-6 text-[#1B3022]" />
                                 </div>
                                 <div>
-                                    <h4 className="font-medium text-sm md:text-base text-foreground">
+                                    <h4 className="font-semibold text-sm md:text-base text-[#1B3022]">
                                         {feature.title}
                                     </h4>
-                                    <p className="text-xs md:text-sm text-muted-foreground">
+                                    <p className="text-xs md:text-sm text-[#5A6B5E]">
                                         {feature.description}
                                     </p>
                                 </div>
@@ -154,18 +132,18 @@ export default async function Page() {
             </section>
 
             {/* Category Cards Section */}
-            <section className="section-padding-sm">
+            <section className="section-padding-sm bg-[#F9FAF7]">
                 <div className="container-premium">
                     {/* Section Header */}
                     <FadeInSection>
-                    <div className="text-center mb-10 md:mb-14">
-                        <span className="text-sm font-medium text-primary tracking-wider uppercase mb-3 block">
+                    <div className="text-center mb-12 md:mb-16">
+                        <span className="text-sm font-semibold text-[#9DBE91] tracking-widest uppercase mb-4 block">
                             Collections
                         </span>
-                        <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl text-foreground mb-4">
+                        <h2 className="font-bold text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-[#1B3022] mb-5 tracking-tight">
                             Shop by Category
                         </h2>
-                        <p className="text-muted-foreground max-w-2xl mx-auto">
+                        <p className="text-[#5A6B5E] max-w-2xl mx-auto text-lg">
                             Discover our curated selection of premium packaging solutions
                         </p>
                     </div>
@@ -173,12 +151,12 @@ export default async function Page() {
 
                     {/* Category Grid */}
                     <FadeInSection delay={150}>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
                         {categories.map((cat, index) => (
                             <Link 
                                 key={cat.name} 
                                 href={cat.href}
-                                className="group relative overflow-hidden rounded-xl aspect-4/5 md:aspect-3/4"
+                                className="group relative overflow-hidden rounded-3xl aspect-4/5 md:aspect-3/4"
                             >
                                 {/* Background Image */}
                                 <div className="absolute inset-0">
@@ -193,21 +171,21 @@ export default async function Page() {
                                         unoptimized
                                     />
                                     {/* Gradient Overlay */}
-                                    <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
+                                    <div className="absolute inset-0 bg-linear-to-t from-[#1B3022]/80 via-[#1B3022]/30 to-transparent" />
                                 </div>
 
                                 {/* Content */}
                                 <div className="relative h-full flex flex-col justify-end p-6 md:p-8">
                                     <div className="transform transition-all duration-500 group-hover:translate-y-2">
-                                        <h3 className="font-serif text-2xl md:text-3xl text-white mb-2">
+                                        <h3 className="font-bold text-2xl md:text-3xl text-white mb-2 tracking-tight">
                                             {cat.name}
                                         </h3>
-                                        <p className="text-white/80 text-sm mb-4">
+                                        <p className="text-white/85 text-sm mb-4">
                                             {cat.description}
                                         </p>
                                         
                                         {/* CTA */}
-                                        <span className="inline-flex items-center gap-2 text-white text-sm font-medium">
+                                        <span className="inline-flex items-center gap-2 text-white text-sm font-semibold">
                                             <span>Explore Collection</span>
                                             <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-2" />
                                         </span>
@@ -215,7 +193,7 @@ export default async function Page() {
                                 </div>
 
                                 {/* Hover Border Effect */}
-                                <div className="absolute inset-0 border-2 border-white/0 group-hover:border-white/20 rounded-xl transition-all duration-500" />
+                                <div className="absolute inset-0 border-2 border-white/0 group-hover:border-white/30 rounded-3xl transition-all duration-500" />
                             </Link>
                         ))}
                     </div>
@@ -224,21 +202,21 @@ export default async function Page() {
             </section>
 
             {/* New Arrivals Section */}
-            <section className="section-padding-sm bg-muted/30">
+            <section className="section-padding-sm bg-[#F4F5F2]">
                 <div className="container-premium">
                     <FadeInSection>
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8 md:mb-10">
+                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10 md:mb-12">
                         <div>
-                            <span className="text-sm font-medium text-primary tracking-wider uppercase mb-2 block">
+                            <span className="text-sm font-semibold text-[#9DBE91] tracking-widest uppercase mb-3 block">
                                 Just In
                             </span>
-                            <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl text-foreground">
+                            <h2 className="font-bold text-2xl md:text-[2rem] lg:text-[2.5rem] text-[#1B3022] tracking-tight">
                                 New Arrivals
                             </h2>
                         </div>
                         <Link 
                             href="/shop/products?tag=new" 
-                            className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all duration-300"
+                            className="inline-flex items-center gap-2 text-[#9DBE91] font-semibold hover:gap-3 transition-all duration-300"
                         >
                             <span>View All</span>
                             <ArrowRight className="w-4 h-4" />
@@ -255,21 +233,21 @@ export default async function Page() {
             </section>
 
             {/* Best Sellers Section */}
-            <section className="section-padding-sm">
+            <section className="section-padding-sm bg-[#F9FAF7]">
                 <div className="container-premium">
                     <FadeInSection>
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8 md:mb-10">
+                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10 md:mb-12">
                         <div>
-                            <span className="text-sm font-medium text-primary tracking-wider uppercase mb-2 block">
+                            <span className="text-sm font-semibold text-[#9DBE91] tracking-widest uppercase mb-3 block">
                                 Customer Favorites
                             </span>
-                            <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl text-foreground">
+                            <h2 className="font-bold text-2xl md:text-[2rem] lg:text-[2.5rem] text-[#1B3022] tracking-tight">
                                 Best Sellers
                             </h2>
                         </div>
                         <Link 
                             href="/shop/products?tag=best-seller" 
-                            className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all duration-300"
+                            className="inline-flex items-center gap-2 text-[#9DBE91] font-semibold hover:gap-3 transition-all duration-300"
                         >
                             <span>View All</span>
                             <ArrowRight className="w-4 h-4" />
@@ -286,31 +264,31 @@ export default async function Page() {
             </section>
 
             {/* Story/About Banner */}
-            <section className="section-padding bg-primary text-primary-foreground">
+            <section className="section-padding bg-[#1B3022] text-white">
                 <div className="container-premium">
-                    <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                    <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
                         <FadeInSection direction="right" className="order-2 lg:order-1">
-                            <span className="text-sm font-medium tracking-wider uppercase mb-4 block opacity-70">
+                            <span className="text-sm font-semibold tracking-widest uppercase mb-5 block text-[#9DBE91]">
                                 Our Story
                             </span>
-                            <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl mb-6 leading-tight">
+                            <h2 className="text-white/80 font-bold text-3xl md:text-4xl lg:text-5xl mb-6 leading-tight tracking-tight">
                                 Crafted with Care, <br />Delivered with Love
                             </h2>
-                            <p className="text-primary-foreground/80 leading-relaxed mb-8 max-w-lg">
+                            <p className="text-white/60 leading-relaxed mb-8 max-w-lg text-lg">
                                 We believe in sustainable, thoughtful packaging that makes every 
                                 unboxing moment special. Each product is designed with both aesthetics 
                                 and environmental responsibility in mind.
                             </p>
                             {/* <Link 
                                 href="/about" 
-                                className="inline-flex items-center gap-2 bg-white text-primary px-6 py-3 rounded-lg font-medium hover:bg-white/90 transition-colors duration-200"
+                                className="inline-flex items-center gap-2 bg-[#9DBE91] hover:bg-[#8AAE7E] text-white px-8 py-4 rounded-full font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
                             >
                                 <span>Learn More</span>
                                 <ArrowRight className="w-4 h-4" />
                             </Link> */}
                         </FadeInSection>
                         <FadeInSection direction="left" delay={200} className="order-1 lg:order-2 relative aspect-square max-w-md mx-auto lg:max-w-none w-full">
-                            <div className="absolute inset-4 md:inset-8 rounded-2xl overflow-hidden bg-muted">
+                            <div className="absolute inset-4 md:inset-8 rounded-3xl overflow-hidden bg-[#2D4A36]">
                                 <Image
                                     src="/images/woman-holding-recyclable-paper-food-box-recycling-idea.jpg"
                                     alt="Our Story"
@@ -322,25 +300,25 @@ export default async function Page() {
                                 />
                             </div>
                             {/* Decorative Elements */}
-                            <div className="absolute top-0 right-0 w-1/3 h-1/3 border-2 border-white/20 rounded-2xl" />
-                            <div className="absolute bottom-0 left-0 w-1/3 h-1/3 border-2 border-white/20 rounded-2xl" />
+                            <div className="absolute top-0 right-0 w-1/3 h-1/3 border-2 border-[#9DBE91]/30 rounded-3xl" />
+                            <div className="absolute bottom-0 left-0 w-1/3 h-1/3 border-2 border-[#9DBE91]/30 rounded-3xl" />
                         </FadeInSection>
                     </div>
                 </div>
             </section>
 
             {/* Featured Products Grid */}
-            <section className="section-padding-sm">
+            <section className="section-padding-sm bg-[#F9FAF7]">
                 <div className="container-premium">
                     <FadeInSection>
-                    <div className="text-center mb-10 md:mb-14">
-                        <span className="text-sm font-medium text-primary tracking-wider uppercase mb-3 block">
+                    <div className="text-center mb-12 md:mb-16">
+                        <span className="text-sm font-semibold text-[#9DBE91] tracking-widest uppercase mb-4 block">
                             Handpicked for You
                         </span>
-                        <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl text-foreground mb-4">
+                        <h2 className="font-bold text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-[#1B3022] mb-5 tracking-tight">
                             Featured Products
                         </h2>
-                        <p className="text-muted-foreground max-w-2xl mx-auto">
+                        <p className="text-[#5A6B5E] max-w-2xl mx-auto text-lg">
                             Our curated selection of premium packaging essentials
                         </p>
                     </div>
@@ -360,10 +338,10 @@ export default async function Page() {
 
                     {/* View All Button */}
                     <FadeInSection delay={300}>
-                    <div className="text-center mt-10 md:mt-12">
+                    <div className="text-center mt-12 md:mt-14">
                         <Link 
                             href="/shop/products" 
-                            className="inline-flex items-center gap-2 btn btn-outline btn-soft px-8"
+                            className="inline-flex items-center gap-2 bg-transparent border-2 border-[#9DBE91] text-[#9DBE91] px-10 py-4 rounded-full font-semibold hover:bg-[#9DBE91] hover:text-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
                         >
                             <span>View All Products</span>
                             <ArrowRight className="w-4 h-4" />
@@ -374,25 +352,25 @@ export default async function Page() {
             </section>
 
             {/* Newsletter Section */}
-            <section className="section-padding-sm bg-muted/50">
+            <section className="section-padding-sm bg-[#F4F5F2]">
                 <div className="container-premium">
                     <FadeInSection>
                     <div className="max-w-2xl mx-auto text-center">
-                        <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl text-foreground mb-4">
+                        <h2 className="font-bold text-2xl md:text-[2rem] lg:text-[2.5rem] text-[#1B3022] mb-5 tracking-tight">
                             Stay in the Loop
                         </h2>
-                        <p className="text-muted-foreground mb-8">
+                        <p className="text-[#5A6B5E] mb-8 text-lg">
                             Subscribe to our newsletter for exclusive offers, new arrivals, and packaging tips.
                         </p>
                         <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
                             <input
                                 type="email"
                                 placeholder="Enter your email"
-                                className="flex-1 px-4 py-3 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                className="flex-1 px-5 py-4 bg-white border border-[#E5E7EB] rounded-full text-base text-[#1B3022] focus:outline-none focus:ring-2 focus:ring-[#9DBE91]/30 focus:border-[#9DBE91] transition-all placeholder:text-[#5A6B5E]/60"
                             />
                             <button
                                 type="submit"
-                                className="btn btn-primary btn-soft whitespace-nowrap"
+                                className="bg-[#9DBE91] hover:bg-[#8AAE7E] text-white px-8 py-4 rounded-full font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap"
                             >
                                 Subscribe
                             </button>
@@ -403,8 +381,8 @@ export default async function Page() {
             </section>
 
             {/* Browsing History - Lazy loaded */}
-            <Suspense fallback={<div className="py-16" />}>
-                <section id="browsing-history" className="section-padding-sm border-t border-border/50">
+            <Suspense fallback={<div className="py-20" />}>
+                <section id="browsing-history" className="section-padding-sm bg-[#F9FAF7] border-t border-[#E5E7EB]">
                     <div className="container-premium">
                         <BrowsingHistoryList />
                     </div>
