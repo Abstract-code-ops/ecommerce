@@ -2,6 +2,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { ChevronUp, Mail, Phone, Instagram, Facebook, Twitter } from 'lucide-react'
+import NewsletterForm from './newsletter-form'
 
 const Footer = () => {
   const currentYear = new Date().getFullYear()
@@ -61,19 +62,7 @@ const Footer = () => {
               <h4 className="font-semibold text-sm tracking-widest uppercase">
                 Join Our Newsletter
               </h4>
-              <form className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-full text-sm placeholder:text-white/50 focus:outline-none focus:border-[#9DBE91] transition-colors"
-                />
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-[#9DBE91] hover:bg-[#8AAE7E] text-white font-semibold text-sm rounded-full transition-all duration-200 hover:shadow-lg"
-                >
-                  Subscribe
-                </button>
-              </form>
+              <NewsletterForm source="footer" variant="footer" />
               <p className="text-xs text-white/50">
                 Get 10% off your first order when you subscribe.
               </p>

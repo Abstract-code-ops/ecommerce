@@ -152,7 +152,6 @@ export async function sendOrderUpdateEmail(
       return { success: false, error: emailError.message }
     }
     
-    console.log(`${emailType} email sent to:`, recipientEmail, 'Email ID:', emailData?.id)
     return { success: true }
     
   } catch (error) {
@@ -378,11 +377,17 @@ export async function getOrderStats(): Promise<{
  */
 function generateOrderNumber(): string {
   const date = new Date()
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase()
-  return `ORD-${year}${month}${day}-${random}`
+  const timestamp = date.toISOString().slice(0, 10).replace(/-/g, '')
+  
+  const array = new Uint8Array(6)
+  crypto.getRandomValues(array)
+  
+  const randomHex = Array.from(array)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase()
+
+  return `ORD-${timestamp}-${randomHex}`
 }
 
 /**
@@ -450,6 +455,7 @@ export async function createOrder(orderData: {
   discount?: number   // In AED
   paymentMethod?: string
   guestEmail?: string  // For guest checkout
+  couponCode?: string  // Coupon code if applied
 }): Promise<{
   success: boolean
   data?: { orderId: string; orderNumber: string; isGuest: boolean }
@@ -469,21 +475,32 @@ export async function createOrder(orderData: {
     
     const outOfStockItems: Array<{ name: string; available: number; requested: number }> = []
     
+    // 1. Collect all unique IDs
+    const productIds: string[] = orderData.items
+      .map(item => item.mongoProductId)
+      .filter((id): id is string => Boolean(id));
+
+    // 2. Fetch all products in ONE hit
+    const products = await Product.find({ _id: { $in: productIds } })
+      .select('countInStock name')
+      .lean();
+
+    // 3. Map for quick lookup
+    const stockMap = new Map(products.map(p => [p._id.toString(), p]));
+
+    // 4. Validate locally (No DB hits in this loop!)
     for (const item of orderData.items) {
-      if (item.mongoProductId) {
-        const product = await Product.findById(item.mongoProductId).select('countInStock name').lean()
-        const availableStock = (product as { countInStock?: number } | null)?.countInStock ?? 0
-        
-        if (availableStock < item.quantity) {
-          outOfStockItems.push({
-            name: item.productSnapshot.name,
-            available: availableStock,
-            requested: item.quantity,
-          })
-        }
+      const product = stockMap.get(item.mongoProductId!);
+      const availableStock = product?.countInStock ?? 0;
+
+      if (availableStock < item.quantity) {
+        outOfStockItems.push({
+          name: item.productSnapshot.name,
+          available: availableStock,
+          requested: item.quantity,
+        });
       }
     }
-    
     if (outOfStockItems.length > 0) {
       return { 
         success: false, 
@@ -512,13 +529,6 @@ export async function createOrder(orderData: {
       guest_email: !user ? orderData.guestEmail : null,  // Store guest email if not logged in
     } as OrderInsert
 
-    // DEBUG: Log what we're trying to insert
-    console.log('=== ORDER INSERT DEBUG ===')
-    console.log('User authenticated:', !!user)
-    console.log('User ID:', user?.id || 'null')
-    console.log('Guest Email:', orderInsertData.guest_email)
-    console.log('Order Data:', JSON.stringify(orderInsertData, null, 2))
-    console.log('============ using ADMIN client (bypasses RLS)')
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .insert(orderInsertData)
@@ -555,25 +565,45 @@ export async function createOrder(orderData: {
 
     // Reduce stock in MongoDB for each product
     try {
-      await connectToDB()
-      
-      for (const item of orderData.items) {
-        if (item.mongoProductId) {
-          await Product.findByIdAndUpdate(
-            item.mongoProductId,
-            { 
+      await connectToDB();
+
+      // Prepare bulk operations
+      const bulkOps = orderData.items
+        .filter(item => item.mongoProductId)
+        .map(item => ({
+          updateOne: {
+            filter: { _id: item.mongoProductId },
+            update: { 
               $inc: { 
                 countInStock: -item.quantity,
                 numSales: item.quantity 
               } 
             }
-          )
-        }
+          }
+        }));
+
+      if (bulkOps.length > 0) {
+        // ONE hit to update every item in the order
+        await Product.bulkWrite(bulkOps);
       }
     } catch (stockError) {
-      console.error('Error reducing stock (order still created):', stockError)
-      // Note: We don't rollback the order here - stock reduction is secondary
-      // In a production system, you might want to queue this for retry
+      console.error('Bulk stock update failed:', stockError);
+    }
+
+    // Record coupon usage if a coupon was applied
+    if (orderData.couponCode && orderData.discount && orderData.discount > 0) {
+      try {
+        // Find the coupon by code (case-insensitive)
+        const { data: result } = await supabaseAdmin.rpc('apply_coupon_and_record_usage', {
+          p_coupon_code: orderData.couponCode,
+          p_order_id: order.id,
+          p_user_id: user?.id,
+          p_guest_email: !user ? orderData.guestEmail : null,
+          p_discount_amount: orderData.discount
+        })
+        } catch (couponError) {
+        console.error('Error recording coupon usage:', couponError)
+      }
     }
 
     // Send order confirmation email

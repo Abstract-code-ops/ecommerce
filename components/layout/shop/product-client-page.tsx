@@ -8,6 +8,7 @@ import BrowsingHistoryList from "@/components/shared/browsing-history-list";
 import AddToBrowsingHistory from "@/components/shared/add-to-browsing-history";
 import ReviewStats from "@/components/shared/review-stats";
 import ReviewList from "@/components/shared/review-list";
+import CustomOrderButton from "@/components/shared/custom-order-button";
 import { useAuth } from "@/lib/hooks/useAuth";
 import type { ReviewStats as ReviewStatsType } from "@/lib/actions/review.actions";
 
@@ -33,6 +34,11 @@ export default function ProductClientPage({ product, relatedProducts, reviewStat
                 <div className="lg:col-span-5 xl:col-span-4 px-6 py-8 lg:px-10 lg:py-16 relative bg-background">
                     <div className="lg:sticky lg:top-24 max-w-lg mx-auto lg:mx-0">
                         <ProductDetailsInfo product={product} reviewStats={reviewStats} />
+                        
+                        {/* Custom Order Button */}
+                        <div className="mt-6 pt-6 border-t border-border">
+                            <CustomOrderButton variant="inline" />
+                        </div>
                     </div>
                 </div>
             </section>

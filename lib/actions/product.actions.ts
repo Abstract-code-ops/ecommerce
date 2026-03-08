@@ -1,6 +1,23 @@
 'use server'
+import { requireAdmin } from "../auth-utils";
 import { connectToDB } from "../db";
 import Product, { IProduct } from "../db/models/product.model";
+import { createClient } from '@/lib/supabase/server'
+
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(',').map(e => e.trim())
+
+/**
+ * Returns the published condition for product queries
+ * Admins see all products, regular users only see published
+ */
+export async function getPublishedCondition(): Promise<{ isPublished?: boolean }> {
+    try{
+        await requireAdmin()
+        return {}
+    }catch{
+        return { isPublished: true }
+    }
+}
 
 // Projection for list views (lighter payload)
 const listProjection = {
@@ -31,9 +48,10 @@ export async function getProductByTag({
     limit?: number;
 }) {
     await connectToDB();
+    const publishedCondition = await getPublishedCondition();
     const products = await Product.find({
         tags: { $in: [tag] },
-        isPublished: true,
+        ...publishedCondition,
     }, listProjection)
     .sort({ createdAt: -1 })
     .limit(limit)
@@ -44,7 +62,8 @@ export async function getProductByTag({
 // Get product by slug (full document for detail page)
 export async function getProductBySlug(slug: string) {
     await connectToDB();
-    const product = await Product.findOne({ slug, isPublished: true }).lean();
+    const publishedCondition = await getPublishedCondition();
+    const product = await Product.findOne({ slug, ...publishedCondition }).lean();
     return product ? serialize(product) as IProduct : null;
 }
 
@@ -62,8 +81,9 @@ export async function getRelatedProductsByCategory({
 }) {
     await connectToDB();
     const skipAmount = (page - 1) * limit;
+    const publishedCondition = await getPublishedCondition();
     const conditions = {
-        isPublished: true,
+        ...publishedCondition,
         category,
         _id: { $ne: productId }
     };
@@ -87,7 +107,8 @@ export async function getRelatedProductsByCategory({
 // Get featured products
 export async function getFeaturedProducts(limit: number = 8) {
     await connectToDB();
-    const products = await Product.find({ isPublished: true }, listProjection)
+    const publishedCondition = await getPublishedCondition();
+    const products = await Product.find(publishedCondition, listProjection)
         .sort({ numSales: -1 })
         .limit(limit)
         .lean();
@@ -122,14 +143,14 @@ export async function getProductStock(productId: string): Promise<{
   }
 }
 
-// Get search suggestions (lightweight for autocomplete)
 export async function getSearchSuggestions(query: string) {
     await connectToDB();
     
     if (!query) return [];
 
+    const publishedCondition = await getPublishedCondition();
     const products = await Product.find({
-        isPublished: true,
+        ...publishedCondition,
         $text: { $search: query }
     }, {
         name: 1,

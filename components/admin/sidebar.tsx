@@ -12,7 +12,8 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  Store
+  Store,
+  Ticket
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -55,6 +56,12 @@ const navigation = [
     href: '/admin/returns',
     icon: RotateCcw,
     description: 'Handle returns & refunds'
+  },
+  {
+    name: 'Coupons',
+    href: '/admin/coupons',
+    icon: Ticket,
+    description: 'Manage discount coupons'
   },
   {
     name: 'Settings',

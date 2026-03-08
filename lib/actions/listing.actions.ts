@@ -2,6 +2,7 @@
 
 import { connectToDB } from "../db";
 import Product, { IProduct } from "../db/models/product.model";
+import { getPublishedCondition } from "./product.actions";
 
 export interface ProductFilters {
   category?: string;
@@ -59,10 +60,12 @@ export async function getFilterOptions(): Promise<FilterOptions> {
   }
 
   await connectToDB();
+  
+  const publishedCondition = await getPublishedCondition();
 
   // Use MongoDB aggregation instead of fetching all documents
   const [aggregationResult] = await Product.aggregate([
-    { $match: { isPublished: true } },
+    { $match: publishedCondition.isPublished !== undefined ? { isPublished: publishedCondition.isPublished } : {} },
     {
       $group: {
         _id: null,
@@ -151,8 +154,9 @@ export async function getFilteredProducts(filters: ProductFilters): Promise<{
     limit = 12,
   } = filters;
 
-  // Build query conditions
-  const conditions: Record<string, unknown> = { isPublished: true };
+  // Build query conditions - admins see all products
+  const publishedCondition = await getPublishedCondition();
+  const conditions: Record<string, unknown> = { ...publishedCondition };
 
   if (category && category !== 'all') {
     conditions.category = category;

@@ -5,10 +5,11 @@ import Image from "next/image";
 import Menu from "./menu";
 import Search from "./search";
 import data from "@/lib/data";
-import { MenuIcon, X, Search as SearchIcon, User, Heart, ShoppingBag } from "lucide-react";
+import { MenuIcon, X, Search as SearchIcon, User, Heart, ShoppingBag, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useCartStore from "@/lib/hooks/useCartStore";
 import useWishlistStore from "@/lib/hooks/useWishlistStore";
+import CustomOrderButton from "@/components/shared/custom-order-button";
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);

@@ -4,6 +4,7 @@ import HeroCarousel from "@/components/layout/home/hero-carousel"
 import HeroSection from "@/components/layout/home/hero-section"
 import BrowsingHistoryList from "@/components/shared/browsing-history-list"
 import FadeInSection from "@/components/shared/fade-in-section"
+import NewsletterForm from "@/components/shared/newsletter-form"
 import { getProductByTag, getFeaturedProducts } from "@/lib/actions/product.actions"
 import { getBanners } from "@/lib/actions/banner.actions"
 import { getCategoryImages } from "@/lib/actions/storefront.actions"
@@ -362,19 +363,7 @@ export default async function Page() {
                         <p className="text-[#5A6B5E] mb-8 text-lg">
                             Subscribe to our newsletter for exclusive offers, new arrivals, and packaging tips.
                         </p>
-                        <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                            <input
-                                type="email"
-                                placeholder="Enter your email"
-                                className="flex-1 px-5 py-4 bg-white border border-[#E5E7EB] rounded-full text-base text-[#1B3022] focus:outline-none focus:ring-2 focus:ring-[#9DBE91]/30 focus:border-[#9DBE91] transition-all placeholder:text-[#5A6B5E]/60"
-                            />
-                            <button
-                                type="submit"
-                                className="bg-[#9DBE91] hover:bg-[#8AAE7E] text-white px-8 py-4 rounded-full font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap"
-                            >
-                                Subscribe
-                            </button>
-                        </form>
+                        <NewsletterForm source="shop_page" variant="section" />
                     </div>
                     </FadeInSection>
                 </div>

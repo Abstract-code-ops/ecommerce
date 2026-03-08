@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  X, User, Mail, Phone, MapPin, Tag, CreditCard, 
-  Banknote, ChevronRight, ChevronLeft, Check, Loader2, Navigation
+  X, User, Mail, Phone, MapPin, CreditCard, 
+  Banknote, ChevronRight, ChevronLeft, Check, Loader2, Navigation,
+  Home, Building2, Plus
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils'
 import ShippingAddressForm from '@/components/shared/shipping-address-form'
+import { Address } from '@/types/supabase'
 
 interface ReceiptData {
   fullName: string
@@ -39,6 +41,7 @@ interface ReceiptModalProps {
   isAuthenticated: boolean
   userEmail?: string
   userName?: string
+  savedAddresses?: Address[]
 }
 
 const steps = [
@@ -58,10 +61,12 @@ export default function ReceiptModal({
   isAuthenticated,
   userEmail,
   userName,
+  savedAddresses = [],
 }: ReceiptModalProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState<ReceiptData>(initialData)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false)
 
   // Sync with initialData when modal opens
   useEffect(() => {
@@ -69,6 +74,7 @@ export default function ReceiptModal({
       setFormData(initialData)
       setCurrentStep(1)
       setErrors({})
+      setShowNewAddressForm(false)
     }
   }, [isOpen, initialData])
 
@@ -135,6 +141,7 @@ export default function ReceiptModal({
     setFormData(prev => ({ ...prev, address }))
     onAddressChange(address)
     setErrors(prev => ({ ...prev, address: '' }))
+    setShowNewAddressForm(false)
   }
 
   if (!isOpen) return null
@@ -162,7 +169,7 @@ export default function ReceiptModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: 'spring', duration: 0.5 }}
-          className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          className="relative w-full max-w-lg bg-white shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-[#E5E7EB]">
@@ -313,19 +320,22 @@ export default function ReceiptModal({
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Calculating...
                       </span>
+                    ) : !formData.address ? (
+                      <span className="text-sm text-[#5A6B5E]">Select address</span>
                     ) : (
-                      <span className={cn(
-                        'font-semibold',
-                        shippingCost === 0 ? 'text-[#9DBE91]' : 'text-[#1B3022]'
-                      )}>
+                      <span className="font-semibold text-[#1B3022]">
                         {shippingCost === 0 ? 'Free' : formatCurrency(shippingCost)}
                       </span>
                     )}
                   </div>
 
-                  {/* Show saved address or form */}
-                  {formData.address ? (
-                    <div className="p-4 bg-[#F9FAF7] border border-[#E5E7EB] rounded-xl">
+                  {errors.address && (
+                    <p className="text-xs text-red-500">{errors.address}</p>
+                  )}
+
+                  {/* Show selected address */}
+                  {formData.address && !showNewAddressForm ? (
+                    <div className="p-4 bg-[#F9FAF7] border border-[#9DBE91] rounded-xl ring-2 ring-[#9DBE91]/20">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 rounded-lg bg-[#9DBE91] flex items-center justify-center shrink-0">
                           <MapPin className="w-5 h-5 text-white" />
@@ -351,11 +361,92 @@ export default function ReceiptModal({
                         </button>
                       </div>
                     </div>
-                  ) : (
+                  ) : showNewAddressForm ? (
+                    /* New Address Form */
                     <div>
-                      {errors.address && (
-                        <p className="text-xs text-red-500 mb-2">{errors.address}</p>
-                      )}
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium text-[#1B3022]">Add New Address</h4>
+                        {savedAddresses.length > 0 && (
+                          <button
+                            onClick={() => setShowNewAddressForm(false)}
+                            className="text-sm text-[#9DBE91] hover:text-[#8AAE7E] font-medium"
+                          >
+                            Back to Saved
+                          </button>
+                        )}
+                      </div>
+                      <ShippingAddressForm
+                        onSave={handleAddressSave}
+                        fullName={formData.fullName}
+                      />
+                    </div>
+                  ) : isAuthenticated && savedAddresses.length > 0 ? (
+                    /* Saved Addresses List for Authenticated Users */
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-[#1B3022]">Select a Delivery Address</h4>
+                      
+                      {savedAddresses.map((addr) => (
+                        <button
+                          key={addr.id}
+                          onClick={() => {
+                            const selectedAddr = {
+                              fullName: addr.full_name,
+                              street: addr.street,
+                              city: addr.city,
+                              emirate: addr.emirate,
+                              country: addr.country,
+                              lat: addr.lat || undefined,
+                              lng: addr.lng || undefined,
+                            }
+                            setFormData(prev => ({ ...prev, address: selectedAddr }))
+                            onAddressChange(selectedAddr)
+                          }}
+                          className="w-full p-4 bg-[#F9FAF7] border border-[#E5E7EB] rounded-xl text-left hover:border-[#9DBE91]/40 hover:bg-[#9DBE91]/5 transition-all"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={cn(
+                              'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
+                              addr.type === 'home' ? 'bg-blue-100' : addr.type === 'work' ? 'bg-amber-100' : 'bg-gray-100'
+                            )}>
+                              {addr.type === 'home' ? (
+                                <Home className="w-4 h-4 text-blue-600" />
+                              ) : addr.type === 'work' ? (
+                                <Building2 className="w-4 h-4 text-amber-600" />
+                              ) : (
+                                <MapPin className="w-4 h-4 text-gray-600" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-[#1B3022] text-sm">{addr.label}</p>
+                                {addr.is_default && (
+                                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-[#9DBE91]/20 text-[#9DBE91] rounded">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-[#5A6B5E] mt-0.5">{addr.full_name}</p>
+                              <p className="text-xs text-[#5A6B5E] truncate">{addr.street}</p>
+                              <p className="text-xs text-[#5A6B5E]">{addr.city}, {addr.emirate}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      
+                      {/* Add New Address Button */}
+                      <button
+                        onClick={() => setShowNewAddressForm(true)}
+                        className="w-full p-4 border-2 border-dashed border-[#E5E7EB] rounded-xl text-center hover:border-[#9DBE91]/40 hover:bg-[#9DBE91]/5 transition-all group"
+                      >
+                        <div className="flex items-center justify-center gap-2 text-[#5A6B5E] group-hover:text-[#9DBE91]">
+                          <Plus className="w-5 h-5" />
+                          <span className="text-sm font-medium">Add New Address</span>
+                        </div>
+                      </button>
+                    </div>
+                  ) : (
+                    /* New Address Form for Guests or Users without Saved Addresses */
+                    <div>
                       <ShippingAddressForm
                         onSave={handleAddressSave}
                         fullName={formData.fullName}
@@ -375,22 +466,6 @@ export default function ReceiptModal({
                   transition={{ duration: 0.3 }}
                   className="space-y-4"
                 >
-                  {/* Coupon Code */}
-                  <div>
-                    <label className="text-sm font-medium text-[#1B3022] mb-1.5 block">
-                      Coupon Code
-                    </label>
-                    <div className="relative">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5A6B5E]" />
-                      <Input
-                        value={formData.couponCode}
-                        onChange={(e) => setFormData(prev => ({ ...prev, couponCode: e.target.value.toUpperCase() }))}
-                        placeholder="Enter coupon code"
-                        className="pl-10 h-12 rounded-xl uppercase"
-                      />
-                    </div>
-                  </div>
-
                   {/* Payment Method */}
                   <div>
                     <label className="text-sm font-medium text-[#1B3022] mb-3 block">

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import useCartStore from '@/lib/hooks/useCartStore'
 import useWishlistStore from '@/lib/hooks/useWishlistStore'
@@ -10,17 +10,19 @@ import Link from 'next/link'
 import { 
   Trash2, Plus, Minus, ShoppingBag,
   ChevronRight, Shield, Truck, RotateCcw,
-  Clock, Package, Heart, AlertCircle,
-  MapPin, Check, ChevronDown, Home, Building2, Loader2,
-  CheckCircle2, ArrowLeft, Lock
+  Clock, Heart, AlertCircle,
+  MapPin, Home, Building2, Loader2,
+  ArrowLeft, Lock
 } from 'lucide-react'
 import { toast } from 'sonner'
 import OrderReceipt from '@/components/cart/order-receipt'
 import ReceiptModal from '@/components/cart/receipt-modal'
+import CouponInput from '@/components/shared/coupon-input'
 import { getAddresses, createAddress } from '@/lib/actions/address.actions'
 import { createOrder, validateCartStock } from '@/lib/actions/order.actions'
 import { Address, ShippingAddressSnapshot, ProductSnapshot } from '@/types/supabase'
 import { cn } from '@/lib/utils'
+import type { Coupon } from '@/lib/actions/coupon.actions'
 
 const CartPage = () => {
   const router = useRouter();
@@ -28,15 +30,13 @@ const CartPage = () => {
   const { items: wishlistItems, toggleItem: toggleWishlist, isInWishlist } = useWishlistStore();
   const { user, isLoading: isAuthLoading } = useAuth();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [checkoutSuccess, setCheckoutSuccess] = useState<{ orderNumber: string } | null>(null);
   
   // Address state
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [isAddressDropdownOpen, setIsAddressDropdownOpen] = useState(false);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+  const prevCartLengthRef = useRef(cart.items.length);
   
   // Guest checkout state
   const [guestEmail, setGuestEmail] = useState('');
@@ -85,13 +85,14 @@ const CartPage = () => {
   // Fetch saved addresses when user is logged in (only once)
   useEffect(() => {
     const fetchAddresses = async () => {
+      if (isAuthLoading) return; // Wait for auth to finish loading
+
       if (!user) {
         setSavedAddresses([]);
         setSelectedAddressId(null);
         addressesFetchedRef.current = false;
         return;
       }
-      
       // Prevent refetch on tab focus - only fetch if not already fetched for this user
       if (addressesFetchedRef.current) return;
       
@@ -149,143 +150,110 @@ const CartPage = () => {
     }
   }, [selectedAddress]);
 
-  // Update shipping cost when address changes
   useEffect(() => {
-    const updateShipping = async () => {
-      if (user && selectedAddress && selectedAddress.lat && selectedAddress.lng) {
-        setIsCalculatingShipping(true);
-        await setShippingAddress({
-          fullName: selectedAddress.full_name,
-          street: selectedAddress.street,
-          city: selectedAddress.city,
-          emirate: selectedAddress.emirate,
-          country: selectedAddress.country || 'UAE',
-          lat: selectedAddress.lat,
-          lng: selectedAddress.lng,
-        });
-        setIsCalculatingShipping(false);
-      } else if (guestAddress && guestAddress.lat && guestAddress.lng) {
-        setIsCalculatingShipping(true);
-        await setShippingAddress(guestAddress);
-        setIsCalculatingShipping(false);
-      }
-    };
-    
-    updateShipping();
-  }, [selectedAddressId, selectedAddress, guestAddress, user, setShippingAddress]);
+    const syncShipping = async () => {
+      // 1. Identify the Source of Truth for the address
+      const activeAddress = user && selectedAddress 
+        ? {
+            fullName: selectedAddress.full_name,
+            street: selectedAddress.street,
+            city: selectedAddress.city,
+            emirate: selectedAddress.emirate,
+            country: selectedAddress.country || 'UAE',
+            lat: selectedAddress.lat,
+            lng: selectedAddress.lng,
+          } 
+        : guestAddress;
 
-  // Recalculate shipping when cart items change (quantity, add, remove)
-  useEffect(() => {
-    const recalculateShipping = async () => {
-      // Only recalculate if we have an address with coordinates
-      const hasAddress = (user && selectedAddress?.lat && selectedAddress?.lng) || 
-                        (guestAddress?.lat && guestAddress?.lng);
-      
-      if (!hasAddress || cart.items.length === 0) return;
+      // 2. Bail if requirements aren't met
+      if (!activeAddress?.lat || !activeAddress?.lng || cart.items.length === 0) {
+        return;
+      }
+
+      // 3. REF-CHECK: Prevent redundant calls on tab focus or cart quantity changes
+      // Only proceed if the location is actually different from what's in the store
+      const isSameLocation = 
+        cart.shippingAddress?.lat === activeAddress.lat && 
+        cart.shippingAddress?.lng === activeAddress.lng;
+
+      // However, if cart length changed, we might need a recalculation even for the same location
+      // We can use a ref to track the last calculated cart length
+      if (isSameLocation && prevCartLengthRef.current === cart.items.length) {
+        return;
+      }
 
       setIsCalculatingShipping(true);
-      const currentAddress = user && selectedAddress ? {
-        fullName: selectedAddress.full_name,
-        street: selectedAddress.street,
-        city: selectedAddress.city,
-        emirate: selectedAddress.emirate,
-        country: selectedAddress.country || 'UAE',
-        lat: selectedAddress.lat,
-        lng: selectedAddress.lng,
-      } : guestAddress;
-
-      if (currentAddress) {
-        await setShippingAddress(currentAddress);
+      
+      try {
+        await setShippingAddress(activeAddress);
+        prevCartLengthRef.current = cart.items.length;
+      } finally {
+        setIsCalculatingShipping(false);
       }
-      setIsCalculatingShipping(false);
     };
 
-    recalculateShipping();
-  }, [cart.items, user, selectedAddress, guestAddress, setShippingAddress]);
-
-  const getAddressTypeIcon = (type: string) => {
-    switch (type) {
-      case 'home': return Home;
-      case 'work': return Building2;
-      default: return MapPin;
-    }
-  };
-
-  const handleAddressSave = async (address: {
-    fullName: string;
-    street: string;
-    city: string;
-    emirate: string;
-    country: string;
-    lat?: number;
-    lng?: number;
-  }) => {
-    // For guest users, just save locally
-    if (!user) {
-      setGuestAddress(address);
-      setShowAddressForm(false);
-      toast.success('✓ Delivery address confirmed');
-      return;
-    }
+    syncShipping();
     
-    // Use createAddress from address.actions.ts (same as profile page)
-    const result = await createAddress({
-      label: 'Checkout Address',
-      type: 'home',
-      full_name: address.fullName,
-      phone: null,
-      street: address.street,
-      city: address.city,
-      emirate: address.emirate,
-      country: address.country,
-      lat: address.lat || null,
-      lng: address.lng || null,
-      is_default: false,
-    });
-    
-    if (result.success && result.data) {
-      toast.success('Address saved successfully');
-      // Add to local state and select it
-      setSavedAddresses(prev => [...prev, result.data!]);
-      setSelectedAddressId(result.data.id);
-      setShowAddressForm(false);
-    } else {
-      toast.error(result.error || 'Failed to save address');
-    }
-  };
-
-  // Get the shipping address for checkout
-  const getCheckoutAddress = (): ShippingAddressSnapshot | null => {
-    if (user && selectedAddress) {
-      return {
-        fullName: selectedAddress.full_name,
-        phone: selectedAddress.phone || undefined,
-        street: selectedAddress.street,
-        city: selectedAddress.city,
-        emirate: selectedAddress.emirate,
-        country: selectedAddress.country || 'UAE',
-        lat: selectedAddress.lat || undefined,
-        lng: selectedAddress.lng || undefined,
-      };
-    }
-    if (guestAddress) {
-      return {
-        fullName: guestAddress.fullName,
-        street: guestAddress.street,
-        city: guestAddress.city,
-        emirate: guestAddress.emirate,
-        country: guestAddress.country || 'UAE',
-        lat: guestAddress.lat || undefined,
-        lng: guestAddress.lng || undefined,
-      };
-    }
-    return null;
-  };
+    // Dependencies: Use primitive IDs/Values rather than objects to avoid reference-loops
+  }, [
+    selectedAddressId, 
+    guestAddress?.lat, 
+    guestAddress?.lng, 
+    cart.items.length, 
+    user?.id
+  ]);
 
   // Stock validation state
   const [stockStatus, setStockStatus] = useState<Map<string, { isAvailable: boolean; availableStock: number }>>(new Map())
   const [isValidatingStock, setIsValidatingStock] = useState(false)
   const [hasOutOfStockItems, setHasOutOfStockItems] = useState(false)
+  
+  // Coupon state
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
+  const [discountAmount, setDiscountAmount] = useState(0)
+  
+  // Calculate discount when coupon is applied or cart changes
+  useEffect(() => {
+    if (appliedCoupon && cart.items.length > 0) {
+      const subtotal = cart.items.reduce((acc, item) => acc + item.totalPrice, 0)
+      
+      let discount = 0
+      if (appliedCoupon.discount_type === 'percentage') {
+        discount = (subtotal * appliedCoupon.discount_value) / 100
+        // Apply max discount cap if set
+        if (appliedCoupon.max_discount_amount && discount > appliedCoupon.max_discount_amount) {
+          discount = appliedCoupon.max_discount_amount
+        }
+      } else {
+        // Fixed discount
+        discount = appliedCoupon.discount_value
+      }
+      
+      // Ensure discount doesn't exceed subtotal
+      discount = Math.min(discount, subtotal)
+      setDiscountAmount(discount)
+    } else {
+      setDiscountAmount(0)
+    }
+  }, [appliedCoupon, cart.items])
+
+  const handleCouponApply = (coupon: Coupon) => {
+    setAppliedCoupon(coupon)
+    setReceiptData(prev => ({
+      ...prev,
+      couponCode: coupon.code
+    }))
+    toast.success(`Coupon applied! You saved ${coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : formatCurrency(coupon.discount_value)}`)
+  }
+
+  const handleCouponRemove = () => {
+    setAppliedCoupon(null)
+    setDiscountAmount(0)
+    setReceiptData(prev => ({
+      ...prev,
+      couponCode: ''
+    }))
+  }
 
   // Validate stock on mount and when cart items change
   useEffect(() => {
@@ -410,9 +378,10 @@ const CartPage = () => {
         subtotal,
         shipping: cart.shippingPrice || 0,
         tax: cart.taxPrice || 0,
-        discount: 0,
+        discount: discountAmount,
         paymentMethod: 'CashOnDelivery',
         guestEmail: !user ? receiptData.email : undefined,
+        couponCode: appliedCoupon?.code,
       });
 
       if (result.success && result.data) {
@@ -777,13 +746,23 @@ const CartPage = () => {
           <div className="lg:col-span-5 space-y-6">
             <div className="lg:sticky lg:top-24">
               
+              {/* Coupon Input */}
+              <div className="mb-4">
+                <CouponInput
+                  subtotal={cart.items.reduce((acc, item) => acc + item.totalPrice, 0)}
+                  onApply={handleCouponApply}
+                  onRemove={handleCouponRemove}
+                  appliedCoupon={appliedCoupon}
+                />
+              </div>
+              
               {/* Order Receipt */}
               <OrderReceipt
                 receiptData={receiptData}
                 subtotal={cart.items.reduce((acc, item) => acc + item.totalPrice, 0)}
                 shippingCost={cart.shippingPrice || 0}
-                discount={0}
-                total={cart.totalPrice || 0}
+                discount={discountAmount}
+                total={(cart.items.reduce((acc, item) => acc + item.totalPrice, 0) + (cart.shippingPrice || 0)) - discountAmount}
                 itemCount={cart.items.length}
                 isComplete={!!(receiptData.fullName && receiptData.email && receiptData.address && receiptData.paymentMethod)}
                 onEditClick={() => setIsReceiptModalOpen(true)}
@@ -890,6 +869,7 @@ const CartPage = () => {
         isAuthenticated={!!user}
         userEmail={user?.email}
         userName={user?.user_metadata?.full_name}
+        savedAddresses={savedAddresses}
       />
 
       {/* Mobile Sticky Checkout Bar */}

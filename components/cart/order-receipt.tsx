@@ -6,7 +6,7 @@ import {
   User, Mail, Phone, MapPin, Tag, Truck, 
   Edit3, FileText, Check, Receipt
 } from 'lucide-react'
-import { cn, formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 
 interface ReceiptData {
   fullName: string
@@ -180,10 +180,10 @@ export default function OrderReceipt({
                   </span>
                   {isCalculatingShipping ? (
                     <span className="text-[#5A6B5E]">Calculating...</span>
+                  ) : !receiptData.address ? (
+                    <span className="text-[#5A6B5E]">Select address</span>
                   ) : (
-                    <span className={cn(
-                      shippingCost === 0 ? 'text-[#9DBE91] font-medium' : 'text-[#1B3022]'
-                    )}>
+                    <span className="text-[#1B3022]">
                       {shippingCost === 0 ? 'Free' : formatCurrency(shippingCost)}
                     </span>
                   )}
@@ -213,7 +213,7 @@ export default function OrderReceipt({
             {/* Total */}
             <div className="flex justify-between items-center py-2">
               <span className="font-semibold text-lg text-[#1B3022]">Total</span>
-              <span className="font-bold text-2xl text-[#9DBE91]">{formatCurrency(total)}</span>
+              <span className="font-bold text-2xl text-[#1B3022]">{formatCurrency(total)}</span>
             </div>
 
             {/* Payment Method */}

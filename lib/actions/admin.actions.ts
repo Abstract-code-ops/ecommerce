@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { connectToDB } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
 import { revalidatePath } from 'next/cache'
+import { requireAdmin, getSession } from '../auth-utils'
 
 // Helper to serialize Mongoose documents
 function serialize<T>(data: T): T {
@@ -21,31 +22,18 @@ if (!ADMIN_EMAILS.length) {
   console.error('CRITICAL: ADMIN_EMAILS not configured!')
 }
 
-async function isAdminUser(): Promise<boolean> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) return false
-  
-  return ADMIN_EMAILS.includes(user.email || '') ||
-         user.user_metadata?.role === 'admin' ||
-         user.app_metadata?.role === 'admin'
-}
-
-export async function checkAdminStatus(): Promise<boolean> {
-  return isAdminUser()
+export async function checkAdminStatus() {
+  const { data: { user } } = await getSession()
+  const isAdmin = !!user && (ADMIN_EMAILS.includes(user.email || '') || user.user_metadata?.role === 'admin')
+  return isAdmin
 }
 
 export async function getAdminDashboardStats() {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
-    // Use admin client to bypass RLS and get all data
-    const supabase = createAdminClient()
+    
     await connectToDB()
+
+    const {supabase} = await requireAdmin()
 
     // Get orders stats from Supabase
     const { data: orders, error: ordersError } = await supabase
@@ -159,11 +147,8 @@ export async function getAdminProducts(options?: {
   page?: number
 }) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
+    
+    await requireAdmin()
     await connectToDB()
 
     const limit = options?.limit || 20
@@ -229,11 +214,8 @@ export async function getAdminProducts(options?: {
 
 export async function getAdminProductById(productId: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
+    
+    await requireAdmin()
     await connectToDB()
 
     const product = await Product.findById(productId).lean()
@@ -260,11 +242,8 @@ export async function getAdminProductById(productId: string) {
 
 export async function updateProductStock(productId: string, newStock: number) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
+    
+    await requireAdmin()
     await connectToDB()
 
     const product = await Product.findByIdAndUpdate(
@@ -288,10 +267,7 @@ export async function updateProductStock(productId: string, newStock: number) {
 
 export async function updateProduct(productId: string, data: Partial<IProduct>) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
+    await requireAdmin()
 
     await connectToDB()
 
@@ -320,10 +296,7 @@ export async function updateProduct(productId: string, data: Partial<IProduct>) 
 
 export async function deleteProduct(productId: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
+    await requireAdmin()
 
     await connectToDB()
 
@@ -343,10 +316,7 @@ export async function deleteProduct(productId: string) {
 
 export async function createProduct(data: Partial<IProduct>) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
+    await requireAdmin()
 
     await connectToDB()
 
@@ -370,12 +340,8 @@ export async function getAdminOrders(options?: {
   page?: number
 }) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
     const limit = options?.limit || 20
     const page = options?.page || 1
     const offset = (page - 1) * limit
@@ -502,12 +468,8 @@ export async function getAdminOrders(options?: {
 
 export async function getAdminOrderById(orderId: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
 
     const { data: order, error } = await supabase
       .from('orders')
@@ -589,12 +551,8 @@ export async function getAdminOrderById(orderId: string) {
 
 export async function updateOrderStatus(orderId: string, status: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
 
     const updateData: any = { status }
     
@@ -629,12 +587,8 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
 export async function updateOrderTracking(orderId: string, trackingNumber: string, estimatedDelivery?: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
 
     const updateData: any = { tracking_number: trackingNumber }
     if (estimatedDelivery) {
@@ -659,12 +613,8 @@ export async function updateOrderTracking(orderId: string, trackingNumber: strin
 
 export async function updateOrderNotes(orderId: string, internalNotes: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
 
     const { error } = await supabase
       .from('orders')
@@ -683,12 +633,8 @@ export async function updateOrderNotes(orderId: string, internalNotes: string) {
 
 export async function updatePaymentStatus(orderId: string, paymentStatus: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
 
     const { error } = await supabase
       .from('orders')
@@ -713,12 +659,8 @@ export async function getAdminCustomers(options?: {
   page?: number
 }) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
     const limit = options?.limit || 20
     const page = options?.page || 1
     const offset = (page - 1) * limit
@@ -792,12 +734,8 @@ export async function getAdminCustomers(options?: {
 
 export async function getAdminCustomerById(customerId: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
 
     // Get profile
     const { data: profile, error: profileError } = await supabase
@@ -865,12 +803,8 @@ export async function getAdminCustomerById(customerId: string) {
 
 export async function getAdminAnalytics(period: 'week' | 'month' | 'year' = 'month') {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
     await connectToDB()
 
     const now = new Date()
@@ -967,12 +901,8 @@ export async function getAdminReviews(options?: {
   page?: number
 }) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
 
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
     const limit = options?.limit || 20
     const page = options?.page || 1
     const offset = (page - 1) * limit
@@ -1077,10 +1007,7 @@ export async function getAdminReviews(options?: {
 
 export async function replyToReview(reviewId: string, replyText: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
+    await requireAdmin()
 
     if (!replyText || replyText.trim().length === 0) {
       return { success: false, error: 'Reply text is required' }
@@ -1125,12 +1052,8 @@ export async function replyToReview(reviewId: string, replyText: string) {
 
 export async function deleteAdminReply(reviewId: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
-    const supabase = createAdminClient()
+    
+    const {supabase} = await requireAdmin()
 
     // Get review product_id for revalidation
     const { data: review } = await supabase
@@ -1165,12 +1088,8 @@ export async function deleteAdminReply(reviewId: string) {
 
 export async function deleteReviewAdmin(reviewId: string) {
   try {
-    const isAdmin = await isAdminUser()
-    if (!isAdmin) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
-    const supabase = createAdminClient()
+    
+    const {supabase} = await requireAdmin()
 
     // Get review product_id for revalidation and stats update
     const { data: review } = await supabase
@@ -1208,7 +1127,7 @@ export async function deleteReviewAdmin(reviewId: string) {
 // Helper function to update MongoDB review stats (admin version)
 async function updateProductReviewStatsAdmin(productId: string) {
   try {
-    const supabase = createAdminClient()
+    const {supabase} = await requireAdmin()
     
     const { data: reviews, error } = await supabase
       .from('reviews')
